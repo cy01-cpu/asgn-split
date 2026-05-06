@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Event {
+  id           Int           @id @default(autoincrement())
+  name         String
+  date         DateTime
+  createdAt    DateTime      @default(now())
+  participants Participant[]
+  expenses     Expense[]
+}
+
+model Participant {
+  id            Int            @id @default(autoincrement())
+  event         Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId       Int
+  name          String
+  emoji         String         @default("🙂")
+  createdAt     DateTime       @default(now())
+  paidExpenses  Expense[]
+  expenseShares ExpenseShare[]
+}
+
+model Expense {
+  id        Int            @id @default(autoincrement())
+  event     Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId   Int
+  paidBy    Participant    @relation(fields: [paidById], references: [id])
+  paidById  Int
+  title     String
+  amount    Int
+  createdAt DateTime       @default(now())
+  shares    ExpenseShare[]
+}
+
+model ExpenseShare {
+  id            Int         @id @default(autoincrement())
+  expense       Expense     @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  expenseId     Int
+  participant   Participant @relation(fields: [participantId], references: [id])
+  participantId Int
+  shareRatio    Float       @default(1.0)
+  amount        Int
+}
