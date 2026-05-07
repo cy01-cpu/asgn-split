@@ -45,7 +45,7 @@ export async function GET(
     balance: balanceMap.get(p.id) ?? 0,
   }));
 
-  // 貪心最少轉帳
+  // 直覺還款模式：每個欠錢的人，按各債主被欠比例分別轉帳
   type Entry = { participantId: number; name: string; emoji: string; amount: number };
   const creditors: Entry[] = [];
   const debtors: Entry[] = [];
@@ -61,23 +61,28 @@ export async function GET(
     amount: number;
   }[] = [];
 
-  let ci = 0;
-  let di = 0;
-  while (ci < creditors.length && di < debtors.length) {
-    const creditor = creditors[ci];
-    const debtor = debtors[di];
-    const transfer = Math.min(creditor.amount, debtor.amount);
+  const totalCredit = creditors.reduce((s, c) => s + c.amount, 0);
 
-    settlements.push({
-      from: { participantId: debtor.participantId, name: debtor.name, emoji: debtor.emoji },
-      to: { participantId: creditor.participantId, name: creditor.name, emoji: creditor.emoji },
-      amount: transfer,
-    });
-
-    creditor.amount -= transfer;
-    debtor.amount -= transfer;
-    if (creditor.amount === 0) ci++;
-    if (debtor.amount === 0) di++;
+  if (totalCredit > 0) {
+    for (const debtor of debtors) {
+      let remaining = debtor.amount;
+      for (let i = 0; i < creditors.length; i++) {
+        const creditor = creditors[i];
+        const isLast = i === creditors.length - 1;
+        // 最後一位債主拿走剩餘金額（避免捨入誤差累積）
+        const transfer = isLast
+          ? remaining
+          : Math.round(debtor.amount * (creditor.amount / totalCredit));
+        if (transfer > 0) {
+          settlements.push({
+            from: { participantId: debtor.participantId, name: debtor.name, emoji: debtor.emoji },
+            to: { participantId: creditor.participantId, name: creditor.name, emoji: creditor.emoji },
+            amount: transfer,
+          });
+        }
+        remaining -= transfer;
+      }
+    }
   }
 
   return Response.json({ settlements, balances });
