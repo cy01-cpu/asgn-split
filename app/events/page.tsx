@@ -14,25 +14,47 @@ type EventSummary = {
 
 export default function EventsPage() {
   const [events, setEvents] = useState<EventSummary[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Create modal
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Delete
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
+
+  // Edit modal
   const [editTarget, setEditTarget] = useState<EventSummary | null>(null);
   const [editName, setEditName] = useState("");
   const [editStartDate, setEditStartDate] = useState("");
   const [editEndDate, setEditEndDate] = useState("");
   const [editSaving, setEditSaving] = useState(false);
 
+  // Login modal
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [loginSaving, setLoginSaving] = useState(false);
+
   async function load() {
     const res = await fetch("/api/events");
     setEvents(await res.json());
   }
 
-  useEffect(() => { load(); }, []);
+  async function checkAdmin() {
+    const res = await fetch("/api/admin/check");
+    const data = await res.json();
+    setIsAdmin(data.isAdmin);
+  }
+
+  useEffect(() => {
+    load();
+    checkAdmin();
+  }, []);
 
   async function createEvent() {
     if (!name.trim() || !startDate) return;
@@ -43,23 +65,18 @@ export default function EventsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: name.trim(), startDate, endDate: endDate || null }),
     });
-    setName("");
-    setStartDate("");
-    setEndDate("");
-    setShowModal(false);
-    setSaving(false);
+    setName(""); setStartDate(""); setEndDate("");
+    setShowModal(false); setSaving(false);
     load();
   }
 
   function deleteEvent(id: number, evName: string, e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     setDeleteTarget({ id, name: evName });
   }
 
   function openEdit(ev: EventSummary, e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     setEditTarget(ev);
     setEditName(ev.name);
     setEditStartDate(ev.startDate.slice(0, 10));
@@ -75,18 +92,36 @@ export default function EventsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: editName.trim(), startDate: editStartDate, endDate: editEndDate || null }),
     });
-    setEditSaving(false);
-    setEditTarget(null);
+    setEditSaving(false); setEditTarget(null);
     load();
   }
 
   async function confirmDelete() {
     if (!deleteTarget) return;
-    setDeletingId(deleteTarget.id);
-    setDeleteTarget(null);
+    setDeletingId(deleteTarget.id); setDeleteTarget(null);
     await fetch(`/api/events/${deleteTarget.id}`, { method: "DELETE" });
-    setDeletingId(null);
-    load();
+    setDeletingId(null); load();
+  }
+
+  async function login() {
+    if (!loginPassword) return;
+    setLoginSaving(true); setLoginError("");
+    const res = await fetch("/api/admin/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: loginPassword }),
+    });
+    setLoginSaving(false);
+    if (res.ok) {
+      setIsAdmin(true); setShowLoginModal(false); setLoginPassword("");
+    } else {
+      setLoginError("密碼錯誤，請再試一次");
+    }
+  }
+
+  async function logout() {
+    await fetch("/api/admin/logout", { method: "POST" });
+    setIsAdmin(false);
   }
 
   function fmtDateRange(startIso: string, endIso: string | null) {
@@ -107,9 +142,17 @@ export default function EventsPage() {
           <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--text-main)", margin: 0 }}>
             🍽️ 帳單分攤計算
           </h1>
-          <button onClick={() => setShowModal(true)} style={accentBtn}>
-            ＋ 新增活動
-          </button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {isAdmin ? (
+              <>
+                <span style={{ fontSize: 13, color: "var(--accent)", fontWeight: 600 }}>👑 管理員</span>
+                <button onClick={logout} style={ghostSmBtn}>登出</button>
+                <button onClick={() => setShowModal(true)} style={accentBtn}>＋ 新增活動</button>
+              </>
+            ) : (
+              <button onClick={() => setShowLoginModal(true)} style={ghostSmBtn}>🔑 管理員登入</button>
+            )}
+          </div>
         </div>
 
         {/* Events */}
@@ -123,25 +166,25 @@ export default function EventsPage() {
             {events.map((ev) => (
               <Link key={ev.id} href={`/events/${ev.id}`} style={{ textDecoration: "none" }}>
                 <div style={cardStyle}>
-                  <div style={{ position: "absolute", top: 10, right: 10, display: "flex", gap: 2 }}>
-                    <button
-                      onClick={(e) => openEdit(ev, e)}
-                      disabled={deletingId === ev.id}
-                      style={{ ...ghostDeleteBtn, position: "static", opacity: deletingId === ev.id ? 0.35 : 1 }}
-                      title="編輯活動"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={(e) => deleteEvent(ev.id, ev.name, e)}
-                      disabled={deletingId === ev.id}
-                      style={{ ...ghostDeleteBtn, position: "static", opacity: deletingId === ev.id ? 0.45 : 1, cursor: deletingId === ev.id ? "not-allowed" : "pointer", minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
-                      title="刪除活動"
-                    >
-                      {deletingId === ev.id ? <span className="spinner-sm" /> : "🗑️"}
-                    </button>
-                  </div>
-                  <div style={{ fontWeight: 600, fontSize: 16, color: "var(--text-main)", marginBottom: 4, paddingRight: 68 }}>
+                  {isAdmin && (
+                    <div style={{ position: "absolute", top: 10, right: 10, display: "flex", gap: 2 }}>
+                      <button
+                        onClick={(e) => openEdit(ev, e)}
+                        disabled={deletingId === ev.id}
+                        style={{ ...ghostDeleteBtn, position: "static", opacity: deletingId === ev.id ? 0.35 : 1 }}
+                        title="編輯活動"
+                      >✏️</button>
+                      <button
+                        onClick={(e) => deleteEvent(ev.id, ev.name, e)}
+                        disabled={deletingId === ev.id}
+                        style={{ ...ghostDeleteBtn, position: "static", opacity: deletingId === ev.id ? 0.45 : 1, cursor: deletingId === ev.id ? "not-allowed" : "pointer", minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
+                        title="刪除活動"
+                      >
+                        {deletingId === ev.id ? <span className="spinner-sm" /> : "🗑️"}
+                      </button>
+                    </div>
+                  )}
+                  <div style={{ fontWeight: 600, fontSize: 16, color: "var(--text-main)", marginBottom: 4, paddingRight: isAdmin ? 68 : 0 }}>
                     {ev.name}
                   </div>
                   <div style={{ fontSize: 13, color: "var(--text-sub)", marginBottom: 10 }}>
@@ -158,13 +201,47 @@ export default function EventsPage() {
         )}
       </div>
 
+      {/* Login Modal */}
+      {showLoginModal && (
+        <div style={overlay} onClick={() => { setShowLoginModal(false); setLoginError(""); setLoginPassword(""); }}>
+          <div style={modalCard} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>
+              🔑 管理員登入
+            </h2>
+            <div style={{ marginBottom: 20 }}>
+              <label style={label}>密碼</label>
+              <input
+                type="password"
+                value={loginPassword}
+                onChange={(e) => { setLoginPassword(e.target.value); setLoginError(""); }}
+                onKeyDown={(e) => e.key === "Enter" && login()}
+                placeholder="輸入管理員密碼"
+                style={{ ...input, borderColor: loginError ? "var(--morandi-red)" : undefined }}
+                autoFocus
+              />
+              {loginError && (
+                <p style={{ fontSize: 12, color: "var(--morandi-red)", margin: "6px 0 0" }}>{loginError}</p>
+              )}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => { setShowLoginModal(false); setLoginError(""); setLoginPassword(""); }} style={ghostBtn}>取消</button>
+              <button
+                onClick={login}
+                disabled={loginSaving || !loginPassword}
+                style={{ ...accentBtn, flex: 1, opacity: loginSaving || !loginPassword ? 0.5 : 1 }}
+              >
+                {loginSaving ? <><span className="spinner" />驗證中...</> : "登入"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Edit Modal */}
       {editTarget && (
         <div style={overlay} onClick={() => setEditTarget(null)}>
           <div style={modalCard} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>
-              編輯活動
-            </h2>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>編輯活動</h2>
             <div style={{ marginBottom: 14 }}>
               <label style={label}>活動名稱</label>
               <input value={editName} onChange={(e) => setEditName(e.target.value)} style={input} autoFocus />
@@ -176,9 +253,7 @@ export default function EventsPage() {
             <div style={{ marginBottom: 24 }}>
               <label style={label}>結束日期 <span style={{ fontWeight: 400, opacity: 0.7 }}>（選填）</span></label>
               <input
-                type="date"
-                value={editEndDate}
-                min={editStartDate}
+                type="date" value={editEndDate} min={editStartDate}
                 onChange={(e) => setEditEndDate(e.target.value)}
                 style={{ ...input, borderColor: editEndDate && editEndDate < editStartDate ? "var(--morandi-red)" : undefined }}
               />
@@ -204,18 +279,13 @@ export default function EventsPage() {
       {deleteTarget && (
         <div style={overlay} onClick={() => setDeleteTarget(null)}>
           <div style={modalCard} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-main)", margin: "0 0 12px" }}>
-              確定刪除活動？
-            </h2>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-main)", margin: "0 0 12px" }}>確定刪除活動？</h2>
             <p style={{ fontSize: 14, color: "var(--text-sub)", lineHeight: 1.6, margin: "0 0 24px" }}>
               「{deleteTarget.name}」及其所有費用、成員、還款紀錄將一併刪除，無法復原。
             </p>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => setDeleteTarget(null)} style={ghostBtn}>取消</button>
-              <button
-                onClick={confirmDelete}
-                style={{ flex: 1, padding: "10px 0", background: "var(--morandi-red)", color: "white", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" }}
-              >
+              <button onClick={confirmDelete} style={{ flex: 1, padding: "10px 0", background: "var(--morandi-red)", color: "white", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
                 確定刪除
               </button>
             </div>
@@ -227,9 +297,7 @@ export default function EventsPage() {
       {showModal && (
         <div style={overlay} onClick={() => setShowModal(false)}>
           <div style={modalCard} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>
-              新增活動
-            </h2>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>新增活動</h2>
             <div style={{ marginBottom: 14 }}>
               <label style={label}>活動名稱</label>
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="例：墾丁三天兩夜" style={input} autoFocus />
@@ -241,9 +309,7 @@ export default function EventsPage() {
             <div style={{ marginBottom: 24 }}>
               <label style={label}>結束日期 <span style={{ fontWeight: 400, opacity: 0.7 }}>（選填）</span></label>
               <input
-                type="date"
-                value={endDate}
-                min={startDate}
+                type="date" value={endDate} min={startDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 style={{ ...input, borderColor: endDate && endDate < startDate ? "var(--morandi-red)" : undefined }}
               />
@@ -352,5 +418,16 @@ const ghostBtn: React.CSSProperties = {
   borderRadius: 8,
   fontSize: 14,
   fontWeight: 600,
+  cursor: "pointer",
+};
+
+const ghostSmBtn: React.CSSProperties = {
+  padding: "7px 12px",
+  background: "var(--bg-card)",
+  color: "var(--text-sub)",
+  border: "1px solid var(--border)",
+  borderRadius: 8,
+  fontSize: 13,
+  fontWeight: 500,
   cursor: "pointer",
 };
