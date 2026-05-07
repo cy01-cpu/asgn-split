@@ -19,6 +19,10 @@ export default function EventsPage() {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
+  const [editTarget, setEditTarget] = useState<{ id: number; name: string; date: string } | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
   async function load() {
     const res = await fetch("/api/events");
@@ -48,6 +52,27 @@ export default function EventsPage() {
     e.preventDefault();
     e.stopPropagation();
     setDeleteTarget({ id, name });
+  }
+
+  function openEdit(ev: EventSummary, e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditTarget({ id: ev.id, name: ev.name, date: ev.date.slice(0, 10) });
+    setEditName(ev.name);
+    setEditDate(ev.date.slice(0, 10));
+  }
+
+  async function saveEdit() {
+    if (!editTarget || !editName.trim() || !editDate) return;
+    setEditSaving(true);
+    await fetch(`/api/events/${editTarget.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: editName.trim(), date: editDate }),
+    });
+    setEditSaving(false);
+    setEditTarget(null);
+    load();
   }
 
   async function confirmDelete() {
@@ -90,15 +115,25 @@ export default function EventsPage() {
             {events.map((ev) => (
               <Link key={ev.id} href={`/events/${ev.id}`} style={{ textDecoration: "none" }}>
                 <div style={cardStyle}>
-                  <button
-                    onClick={(e) => deleteEvent(ev.id, ev.name, e)}
-                    disabled={deletingId === ev.id}
-                    style={{ ...ghostDeleteBtn, opacity: deletingId === ev.id ? 0.45 : 1, cursor: deletingId === ev.id ? "not-allowed" : "pointer" }}
-                    title="刪除活動"
-                  >
-                    {deletingId === ev.id ? <span className="spinner-sm" /> : "🗑️"}
-                  </button>
-                  <div style={{ fontWeight: 600, fontSize: 16, color: "var(--text-main)", marginBottom: 4, paddingRight: 32 }}>
+                  <div style={{ position: "absolute", top: 10, right: 10, display: "flex", gap: 2 }}>
+                    <button
+                      onClick={(e) => openEdit(ev, e)}
+                      disabled={deletingId === ev.id}
+                      style={{ ...ghostDeleteBtn, position: "static", opacity: deletingId === ev.id ? 0.35 : 1 }}
+                      title="編輯活動"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={(e) => deleteEvent(ev.id, ev.name, e)}
+                      disabled={deletingId === ev.id}
+                      style={{ ...ghostDeleteBtn, position: "static", opacity: deletingId === ev.id ? 0.45 : 1, cursor: deletingId === ev.id ? "not-allowed" : "pointer", minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
+                      title="刪除活動"
+                    >
+                      {deletingId === ev.id ? <span className="spinner-sm" /> : "🗑️"}
+                    </button>
+                  </div>
+                  <div style={{ fontWeight: 600, fontSize: 16, color: "var(--text-main)", marginBottom: 4, paddingRight: 68 }}>
                     {ev.name}
                   </div>
                   <div style={{ fontSize: 13, color: "var(--text-sub)", marginBottom: 10 }}>
@@ -114,6 +149,45 @@ export default function EventsPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Modal */}
+      {editTarget && (
+        <div style={overlay} onClick={() => setEditTarget(null)}>
+          <div style={modalCard} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>
+              編輯活動
+            </h2>
+            <div style={{ marginBottom: 14 }}>
+              <label style={label}>活動名稱</label>
+              <input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                style={input}
+                autoFocus
+              />
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <label style={label}>活動日期</label>
+              <input
+                type="date"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+                style={input}
+              />
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setEditTarget(null)} style={ghostBtn}>取消</button>
+              <button
+                onClick={saveEdit}
+                disabled={editSaving || !editName.trim() || !editDate}
+                style={{ ...accentBtn, flex: 1, opacity: editSaving || !editName.trim() || !editDate ? 0.5 : 1 }}
+              >
+                {editSaving ? <><span className="spinner" />儲存中...</> : "儲存"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirm Modal */}
       {deleteTarget && (

@@ -22,6 +22,19 @@ export async function GET(
   return Response.json(event);
 }
 
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const { name, date } = await req.json();
+  const event = await db.event.update({
+    where: { id: Number(id) },
+    data: { name: name.trim(), date: new Date(date) },
+  });
+  return Response.json(event);
+}
+
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
