@@ -16,7 +16,7 @@ export async function GET(
 
   // 每人淨餘額（正 = 被欠錢，負 = 欠人錢）
   const balanceMap = new Map<number, number>(
-    participants.map((p) => [p.id, 0])
+    participants.map((p: { id: number }) => [p.id, 0] as [number, number])
   );
 
   for (const expense of expenses) {
@@ -38,7 +38,7 @@ export async function GET(
     balanceMap.set(r.toId, (balanceMap.get(r.toId) ?? 0) - r.amount);
   }
 
-  const balances = participants.map((p) => ({
+  const balances = participants.map((p: { id: number; name: string; emoji: string }) => ({
     participantId: p.id,
     name: p.name,
     emoji: p.emoji,
