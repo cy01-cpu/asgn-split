@@ -554,21 +554,21 @@ export default function EventDetailPage() {
           borderBottom: "1px solid var(--separator)",
           background: "var(--bg-main)",
         }}>
-          <Link href="/events" style={{ color: "var(--text-sub)", textDecoration: "none", fontSize: 22, lineHeight: 1 }}>
+          <Link href="/events" style={{ color: "var(--text-sub)", textDecoration: "none", fontSize: 24, lineHeight: 1 }}>
             ←
           </Link>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: "var(--text-main)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: "var(--text-main)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {event.name}
             </h1>
-            <p style={{ fontSize: 12, color: "var(--text-sub)", margin: "2px 0 0" }}>
+            <p style={{ fontSize: 13, color: "var(--text-sub)", margin: "2px 0 0" }}>
               📅 {fmtDateRange(event.startDate, event.endDate)} · {event.participants.length} 位成員
             </p>
             {(() => {
               const total = event.expenses.reduce((s, e) => s + e.amount, 0);
               const avg = event.participants.length > 0 ? Math.round(total / event.participants.length) : 0;
               return (
-                <p style={{ fontSize: 11, color: "var(--text-sub)", margin: "2px 0 0", opacity: 0.85 }}>
+                <p style={{ fontSize: 12, color: "var(--text-sub)", margin: "2px 0 0", opacity: 0.85 }}>
                   💰 總花費 {fmtNT(total)}　👤 人均 {fmtNT(avg)}　📋 {event.expenses.length} 筆費用
                 </p>
               );
@@ -598,7 +598,7 @@ export default function EventDetailPage() {
                 padding: "13px 0",
                 border: "none",
                 cursor: "pointer",
-                fontSize: 13,
+                fontSize: 16,
                 fontWeight: 600,
                 background: tab === t ? "var(--bg-main)" : "var(--bg-card)",
                 color: tab === t ? "var(--accent)" : "var(--text-sub)",
@@ -625,15 +625,15 @@ export default function EventDetailPage() {
                 padding: "14px 14px 12px",
                 marginBottom: 20,
               }}>
-                <p style={{ fontSize: 12, color: "var(--text-sub)", fontWeight: 600, margin: "0 0 10px" }}>選擇頭像</p>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+                <p style={{ fontSize: 13, color: "var(--text-sub)", fontWeight: 600, margin: "0 0 10px" }}>選擇頭像</p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6, marginBottom: 12 }}>
                   {EMOJI_LIST.map((e) => (
                     <button
                       key={e}
                       onClick={() => setSelectedEmoji(e)}
                       style={{
-                        width: 38, height: 38,
-                        fontSize: 20,
+                        width: "100%", height: 44,
+                        fontSize: 22,
                         borderRadius: 8,
                         border: selectedEmoji === e ? "2px solid var(--accent)" : "2px solid transparent",
                         background: selectedEmoji === e ? "var(--bg-main)" : "transparent",
@@ -678,15 +678,15 @@ export default function EventDetailPage() {
                     editingId === p.id ? (
                       /* ── Inline edit mode ── */
                       <div key={p.id} style={{ ...rowCard, flexDirection: "column", alignItems: "stretch", gap: 10 }}>
-                        <p style={{ fontSize: 12, color: "var(--text-sub)", fontWeight: 600, margin: 0 }}>更換頭像</p>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        <p style={{ fontSize: 13, color: "var(--text-sub)", fontWeight: 600, margin: 0 }}>更換頭像</p>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6 }}>
                           {EMOJI_LIST.map((e) => (
                             <button
                               key={e}
                               onClick={() => setEditEmoji(e)}
                               style={{
-                                width: 36, height: 36,
-                                fontSize: 19,
+                                width: "100%", height: 44,
+                                fontSize: 22,
                                 borderRadius: 8,
                                 border: editEmoji === e ? "2px solid var(--accent)" : "2px solid transparent",
                                 background: editEmoji === e ? "var(--bg-main)" : "transparent",
@@ -726,7 +726,7 @@ export default function EventDetailPage() {
                     ) : (
                       /* ── Normal card ── */
                       <div key={p.id} style={rowCard}>
-                        <span style={{ fontWeight: 600, fontSize: 15 }}>{p.emoji} {p.name}</span>
+                        <span style={{ fontWeight: 600, fontSize: 16 }}>{p.emoji} {p.name}</span>
                         <div style={{ display: "flex", gap: 2 }}>
                           <button
                             onClick={() => startEdit(p)}
@@ -763,14 +763,14 @@ export default function EventDetailPage() {
                   ...accentBtnSt,
                   width: "100%",
                   marginBottom: 16,
-                  padding: "12px 0",
+                  padding: "14px 0",
                   opacity: event.participants.length === 0 ? 0.5 : 1,
                 }}
               >
                 ＋ 新增費用
               </button>
               {event.participants.length === 0 && (
-                <p style={{ textAlign: "center", fontSize: 13, color: "var(--text-sub)", marginBottom: 12 }}>
+                <p style={{ textAlign: "center", fontSize: 14, color: "var(--text-sub)", marginBottom: 12 }}>
                   請先至「成員」頁籤新增參與者
                 </p>
               )}
@@ -783,8 +783,8 @@ export default function EventDetailPage() {
                     <div key={exp.id} style={{ ...rowCard, flexDirection: "column", alignItems: "stretch" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                         <div>
-                          <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>{exp.title}</div>
-                          <div style={{ fontSize: 20, fontWeight: 700, color: "var(--accent)" }}>
+                          <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>{exp.title}</div>
+                          <div style={{ fontSize: 22, fontWeight: 700, color: "var(--accent)" }}>
                             {fmtNT(exp.amount)}
                           </div>
                         </div>
@@ -807,7 +807,7 @@ export default function EventDetailPage() {
                           </button>
                         </div>
                       </div>
-                      <div style={{ display: "flex", gap: 14, fontSize: 12, color: "var(--text-sub)", marginTop: 10 }}>
+                      <div style={{ display: "flex", gap: 14, fontSize: 13, color: "var(--text-sub)", marginTop: 10 }}>
                         <span>💳 {exp.paidBy.name} 付款</span>
                         <span>👥 {exp.shares.length} 人分攤</span>
                       </div>
@@ -830,11 +830,11 @@ export default function EventDetailPage() {
                   <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
                     {settlement.balances.map((b) => (
                       <div key={b.participantId} style={rowCard}>
-                        <span style={{ fontSize: 15 }}>{b.name}</span>
+                        <span style={{ fontSize: 16 }}>{b.name}</span>
                         <div style={{ textAlign: "right" }}>
                           <span style={{
                             fontWeight: 700,
-                            fontSize: 15,
+                            fontSize: 18,
                             color: b.balance > 0
                               ? "var(--morandi-green)"
                               : b.balance < 0
@@ -844,7 +844,7 @@ export default function EventDetailPage() {
                             {b.balance > 0 ? "+" : ""}{fmtNT(b.balance)}
                           </span>
                           {b.balance !== 0 && (
-                            <div style={{ fontSize: 11, color: b.balance > 0 ? "var(--morandi-green)" : "var(--morandi-red)", marginTop: 1 }}>
+                            <div style={{ fontSize: 12, color: b.balance > 0 ? "var(--morandi-green)" : "var(--morandi-red)", marginTop: 1 }}>
                               {b.balance > 0 ? "待收" : "未償"}
                             </div>
                           )}
@@ -864,7 +864,7 @@ export default function EventDetailPage() {
                       textAlign: "center",
                       color: "var(--morandi-green)",
                       fontWeight: 600,
-                      fontSize: 15,
+                      fontSize: 16,
                       marginBottom: 16,
                     }}>
                       ✅ 已結清，無需轉帳！
@@ -873,12 +873,12 @@ export default function EventDetailPage() {
                     <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
                       {settlement.settlements.map((s, i) => (
                         <div key={i} style={{ ...rowCard, gap: 8 }}>
-                          <span style={{ fontSize: 14, flex: 1 }}>
+                          <span style={{ fontSize: 15, flex: 1, minWidth: 0 }}>
                             💸 <strong>{s.from.name}</strong>
                             <span style={{ color: "var(--text-sub)" }}> 付給 </span>
                             <strong>{s.to.name}</strong>
                           </span>
-                          <span style={{ fontWeight: 700, color: "var(--accent)", fontSize: 15, whiteSpace: "nowrap" }}>
+                          <span style={{ fontWeight: 700, color: "var(--accent)", fontSize: 18, whiteSpace: "nowrap" }}>
                             {fmtNT(s.amount)}
                           </span>
                         </div>
@@ -892,14 +892,14 @@ export default function EventDetailPage() {
                     {repayments.map((r) => (
                       <div key={r.id} style={rowCard}>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <span style={{ fontSize: 14 }}>
+                          <span style={{ fontSize: 15 }}>
                             <strong>{r.fromParticipant.name}</strong>
                             <span style={{ color: "var(--text-sub)" }}> 還給 </span>
                             <strong>{r.toParticipant.name}</strong>
                           </span>
                           <div style={{ display: "flex", gap: 10, marginTop: 3, alignItems: "center" }}>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--morandi-green)" }}>{fmtNT(r.amount)}</span>
-                            {r.note && <span style={{ fontSize: 12, color: "var(--text-sub)" }}>{r.note}</span>}
+                            <span style={{ fontSize: 14, fontWeight: 700, color: "var(--morandi-green)" }}>{fmtNT(r.amount)}</span>
+                            {r.note && <span style={{ fontSize: 13, color: "var(--text-sub)" }}>{r.note}</span>}
                           </div>
                         </div>
                         <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
@@ -923,7 +923,7 @@ export default function EventDetailPage() {
                       </div>
                     ))}
                     {repayments.length === 0 && (
-                      <div style={{ textAlign: "center", padding: "12px 0", fontSize: 13, color: "var(--text-sub)" }}>
+                      <div style={{ textAlign: "center", padding: "12px 0", fontSize: 14, color: "var(--text-sub)" }}>
                         尚無還款紀錄
                       </div>
                     )}
@@ -932,12 +932,12 @@ export default function EventDetailPage() {
                       disabled={!event || event.participants.length < 2}
                       style={{
                         width: "100%",
-                        padding: "10px 0",
+                        padding: "12px 0",
                         borderRadius: 10,
                         border: "1px dashed var(--border)",
                         background: "transparent",
                         color: "var(--text-sub)",
-                        fontSize: 13,
+                        fontSize: 15,
                         cursor: "pointer",
                       }}
                     >
@@ -956,7 +956,7 @@ export default function EventDetailPage() {
                         border: "none",
                         background: copied ? "var(--morandi-green)" : "var(--accent)",
                         color: "white",
-                        fontSize: 14,
+                        fontSize: 16,
                         fontWeight: 600,
                         cursor: "pointer",
                         transition: "background 0.2s",
@@ -973,7 +973,7 @@ export default function EventDetailPage() {
                         border: "1px solid var(--border)",
                         background: "var(--bg-card)",
                         color: "var(--text-sub)",
-                        fontSize: 13,
+                        fontSize: 15,
                         cursor: "pointer",
                       }}
                     >
@@ -1007,7 +1007,7 @@ export default function EventDetailPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ width: 36, height: 4, background: "var(--border)", borderRadius: 2, margin: "0 auto 20px" }} />
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>
               {editingExpId !== null ? "編輯費用" : "新增費用"}
             </h2>
 
@@ -1056,11 +1056,11 @@ export default function EventDetailPage() {
                     onClick={() => setSplitMode(mode)}
                     style={{
                       flex: 1,
-                      padding: "9px 0",
+                      padding: "11px 0",
                       borderRadius: 8,
                       border: "1px solid var(--border)",
                       cursor: "pointer",
-                      fontSize: 13,
+                      fontSize: 15,
                       fontWeight: 600,
                       background: splitMode === mode ? "var(--accent)" : "var(--bg-card)",
                       color: splitMode === mode ? "white" : "var(--text-main)",
@@ -1105,9 +1105,9 @@ export default function EventDetailPage() {
                           }}
                           style={{ accentColor: "var(--accent)", width: 16, height: 16 }}
                         />
-                        <span style={{ flex: 1, fontSize: 14 }}>{p.name}</span>
+                        <span style={{ flex: 1, fontSize: 15 }}>{p.name}</span>
                         {checked && equalPerPerson > 0 && (
-                          <span style={{ fontSize: 12, color: "var(--text-sub)" }}>
+                          <span style={{ fontSize: 13, color: "var(--text-sub)" }}>
                             {fmtNT(equalPerPerson)}
                           </span>
                         )}
@@ -1154,7 +1154,7 @@ export default function EventDetailPage() {
                           padding: "10px 12px",
                         }}
                       >
-                        <span style={{ flex: 1, fontSize: 14 }}>{p.name}</span>
+                        <span style={{ flex: 1, fontSize: 15 }}>{p.name}</span>
                         <input
                           type="number"
                           value={customRatios[p.id] ?? "0"}
@@ -1238,7 +1238,7 @@ export default function EventDetailPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ width: 36, height: 4, background: "var(--border)", borderRadius: 2, margin: "0 auto 20px" }} />
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>
               {editingRepayId !== null ? "編輯還款紀錄" : "新增還款紀錄"}
             </h2>
 
@@ -1290,10 +1290,10 @@ export default function EventDetailPage() {
                     }}
                     style={{
                       flex: 1,
-                      padding: "8px 4px",
+                      padding: "10px 4px",
                       borderRadius: 8,
                       border: "1px solid var(--border)",
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: 600,
                       cursor: "pointer",
                       background: repayPayMethod === method ? "var(--morandi-purple, #b39dac)" : "var(--bg-card)",
@@ -1386,15 +1386,15 @@ function SettlementLoadingView() {
 function EmptyState({ icon, text }: { icon: string; text: string }) {
   return (
     <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text-sub)" }}>
-      <div style={{ fontSize: 40, marginBottom: 8 }}>{icon}</div>
-      <p style={{ fontSize: 14 }}>{text}</p>
+      <div style={{ fontSize: 44, marginBottom: 8 }}>{icon}</div>
+      <p style={{ fontSize: 16 }}>{text}</p>
     </div>
   );
 }
 
 function SectionLabel({ text }: { text: string }) {
   return (
-    <p style={{ fontSize: 12, color: "var(--text-sub)", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 10 }}>
+    <p style={{ fontSize: 13, color: "var(--text-sub)", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 10 }}>
       {text}
     </p>
   );
@@ -1403,7 +1403,7 @@ function SectionLabel({ text }: { text: string }) {
 function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 14 }}>
-      <label style={{ display: "block", fontSize: 13, color: "var(--text-sub)", marginBottom: 6, fontWeight: 500 }}>
+      <label style={{ display: "block", fontSize: 14, color: "var(--text-sub)", marginBottom: 6, fontWeight: 500 }}>
         {label}
       </label>
       {children}
@@ -1415,34 +1415,34 @@ function Field({ label, children }: { label: React.ReactNode; children: React.Re
 
 const inputSt: React.CSSProperties = {
   width: "100%",
-  padding: "10px 12px",
+  padding: "13px 14px",
   background: "var(--bg-card)",
   border: "1px solid var(--border)",
   borderRadius: 8,
-  fontSize: 14,
+  fontSize: 16,
   color: "var(--text-main)",
   outline: "none",
 };
 
 const accentBtnSt: React.CSSProperties = {
-  padding: "10px 18px",
+  padding: "12px 16px",
   background: "var(--accent)",
   color: "white",
   border: "none",
   borderRadius: 8,
-  fontSize: 14,
+  fontSize: 16,
   fontWeight: 600,
   cursor: "pointer",
 };
 
 const ghostBtnSt: React.CSSProperties = {
   flex: 1,
-  padding: "10px 0",
+  padding: "12px 0",
   background: "var(--bg-card)",
   color: "var(--text-main)",
   border: "1px solid var(--border)",
   borderRadius: 8,
-  fontSize: 14,
+  fontSize: 16,
   fontWeight: 600,
   cursor: "pointer",
 };

@@ -138,14 +138,14 @@ export default function EventsPage() {
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "24px 16px 80px" }}>
 
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--text-main)", margin: 0 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: "var(--text-main)", margin: 0 }}>
             🍽️ 帳單分攤計算
           </h1>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {isAdmin ? (
               <>
-                <span style={{ fontSize: 13, color: "var(--accent)", fontWeight: 600 }}>👑 管理員</span>
+                <span style={{ fontSize: 14, color: "var(--accent)", fontWeight: 600 }}>👑 管理員</span>
                 <button onClick={logout} style={ghostSmBtn}>登出</button>
                 <button onClick={() => setShowModal(true)} style={accentBtn}>＋ 新增活動</button>
               </>
@@ -159,7 +159,7 @@ export default function EventsPage() {
         {events.length === 0 ? (
           <div style={{ textAlign: "center", padding: "64px 0", color: "var(--text-sub)" }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>🌸</div>
-            <p style={{ fontSize: 15 }}>還沒有活動，新增一個吧！</p>
+            <p style={{ fontSize: 16 }}>還沒有活動，新增一個吧！</p>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -184,7 +184,7 @@ export default function EventsPage() {
                       </button>
                     </div>
                   )}
-                  <div style={{ fontWeight: 600, fontSize: 16, color: "var(--text-main)", marginBottom: 4, paddingRight: isAdmin ? 68 : 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 18, color: "var(--text-main)", marginBottom: 4, paddingRight: isAdmin ? 68 : 0 }}>
                     {ev.name}
                   </div>
                   <div style={{ fontSize: 13, color: "var(--text-sub)", marginBottom: 10 }}>
@@ -205,7 +205,7 @@ export default function EventsPage() {
       {showLoginModal && (
         <div style={overlay} onClick={() => { setShowLoginModal(false); setLoginError(""); setLoginPassword(""); }}>
           <div style={modalCard} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>
               🔑 管理員登入
             </h2>
             <div style={{ marginBottom: 20 }}>
@@ -241,7 +241,7 @@ export default function EventsPage() {
       {editTarget && (
         <div style={overlay} onClick={() => setEditTarget(null)}>
           <div style={modalCard} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>編輯活動</h2>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>編輯活動</h2>
             <div style={{ marginBottom: 14 }}>
               <label style={label}>活動名稱</label>
               <input value={editName} onChange={(e) => setEditName(e.target.value)} style={input} autoFocus />
@@ -279,13 +279,13 @@ export default function EventsPage() {
       {deleteTarget && (
         <div style={overlay} onClick={() => setDeleteTarget(null)}>
           <div style={modalCard} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-main)", margin: "0 0 12px" }}>確定刪除活動？</h2>
-            <p style={{ fontSize: 14, color: "var(--text-sub)", lineHeight: 1.6, margin: "0 0 24px" }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: "0 0 12px" }}>確定刪除活動？</h2>
+            <p style={{ fontSize: 15, color: "var(--text-sub)", lineHeight: 1.6, margin: "0 0 24px" }}>
               「{deleteTarget.name}」及其所有費用、成員、還款紀錄將一併刪除，無法復原。
             </p>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => setDeleteTarget(null)} style={ghostBtn}>取消</button>
-              <button onClick={confirmDelete} style={{ flex: 1, padding: "10px 0", background: "var(--morandi-red)", color: "white", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+              <button onClick={confirmDelete} style={{ flex: 1, padding: "12px 0", background: "var(--morandi-red)", color: "white", border: "none", borderRadius: 8, fontSize: 16, fontWeight: 600, cursor: "pointer" }}>
                 確定刪除
               </button>
             </div>
@@ -297,7 +297,7 @@ export default function EventsPage() {
       {showModal && (
         <div style={overlay} onClick={() => setShowModal(false)}>
           <div style={modalCard} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>新增活動</h2>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>新增活動</h2>
             <div style={{ marginBottom: 14 }}>
               <label style={label}>活動名稱</label>
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="例：墾丁三天兩夜" style={input} autoFocus />
@@ -381,53 +381,53 @@ const modalCard: React.CSSProperties = {
 
 const input: React.CSSProperties = {
   width: "100%",
-  padding: "10px 12px",
+  padding: "13px 14px",
   background: "var(--bg-card)",
   border: "1px solid var(--border)",
   borderRadius: 8,
-  fontSize: 14,
+  fontSize: 16,
   color: "var(--text-main)",
   outline: "none",
 };
 
 const label: React.CSSProperties = {
   display: "block",
-  fontSize: 13,
+  fontSize: 14,
   color: "var(--text-sub)",
   marginBottom: 6,
   fontWeight: 500,
 };
 
 const accentBtn: React.CSSProperties = {
-  padding: "9px 18px",
+  padding: "12px 16px",
   background: "var(--accent)",
   color: "white",
   border: "none",
   borderRadius: 8,
-  fontSize: 14,
+  fontSize: 16,
   fontWeight: 600,
   cursor: "pointer",
 };
 
 const ghostBtn: React.CSSProperties = {
   flex: 1,
-  padding: "10px 0",
+  padding: "12px 0",
   background: "var(--bg-card)",
   color: "var(--text-main)",
   border: "1px solid var(--border)",
   borderRadius: 8,
-  fontSize: 14,
+  fontSize: 16,
   fontWeight: 600,
   cursor: "pointer",
 };
 
 const ghostSmBtn: React.CSSProperties = {
-  padding: "7px 12px",
+  padding: "9px 14px",
   background: "var(--bg-card)",
   color: "var(--text-sub)",
   border: "1px solid var(--border)",
   borderRadius: 8,
-  fontSize: 13,
+  fontSize: 15,
   fontWeight: 500,
   cursor: "pointer",
 };
