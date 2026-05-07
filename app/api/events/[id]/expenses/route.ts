@@ -15,7 +15,7 @@ export async function POST(
     where: { eventId: Number(id) },
     select: { id: true },
   });
-  const validIds = new Set(eventParticipants.map((p) => p.id));
+  const validIds = new Set(eventParticipants.map((p: { id: number }) => p.id));
   const hasInvalid = (shares as ShareInput[]).some(
     (s) => !validIds.has(Number(s.participantId))
   );
