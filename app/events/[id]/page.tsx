@@ -27,7 +27,8 @@ type Expense = {
 type EventDetail = {
   id: number;
   name: string;
-  date: string;
+  startDate: string;
+  endDate: string | null;
   participants: Participant[];
   expenses: Expense[];
 };
@@ -66,6 +67,15 @@ type SplitMode = "equal" | "custom";
 function fmtDate(s: string) {
   const [y, m, d] = s.slice(0, 10).split("-");
   return `${y}/${m}/${d}`;
+}
+
+function fmtDateRange(startIso: string, endIso: string | null) {
+  const [sy, sm, sd] = startIso.slice(0, 10).split("-");
+  const start = `${sy}/${sm}/${sd}`;
+  if (!endIso) return start;
+  const [, em, ed] = endIso.slice(0, 10).split("-");
+  const days = Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 86400000) + 1;
+  return `${start} ~ ${em}/${ed}（${days}天）`;
 }
 
 function fmtNT(n: number) {
@@ -552,7 +562,7 @@ export default function EventDetailPage() {
               {event.name}
             </h1>
             <p style={{ fontSize: 12, color: "var(--text-sub)", margin: "2px 0 0" }}>
-              📅 {fmtDate(event.date)} · {event.participants.length} 位成員
+              📅 {fmtDateRange(event.startDate, event.endDate)} · {event.participants.length} 位成員
             </p>
             {(() => {
               const total = event.expenses.reduce((s, e) => s + e.amount, 0);

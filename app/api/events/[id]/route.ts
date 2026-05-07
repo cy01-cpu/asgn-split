@@ -27,10 +27,14 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { name, date } = await req.json();
+  const { name, startDate, endDate } = await req.json();
   const event = await db.event.update({
     where: { id: Number(id) },
-    data: { name: name.trim(), date: new Date(date) },
+    data: {
+      name: name.trim(),
+      startDate: new Date(startDate),
+      endDate: endDate ? new Date(endDate) : null,
+    },
   });
   return Response.json(event);
 }

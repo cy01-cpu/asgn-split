@@ -6,7 +6,8 @@ import Link from "next/link";
 type EventSummary = {
   id: number;
   name: string;
-  date: string;
+  startDate: string;
+  endDate: string | null;
   participants: { id: number }[];
   expenses: { id: number }[];
 };
@@ -15,13 +16,15 @@ export default function EventsPage() {
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState("");
-  const [date, setDate] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
-  const [editTarget, setEditTarget] = useState<{ id: number; name: string; date: string } | null>(null);
+  const [editTarget, setEditTarget] = useState<EventSummary | null>(null);
   const [editName, setEditName] = useState("");
-  const [editDate, setEditDate] = useState("");
+  const [editStartDate, setEditStartDate] = useState("");
+  const [editEndDate, setEditEndDate] = useState("");
   const [editSaving, setEditSaving] = useState(false);
 
   async function load() {
@@ -29,46 +32,48 @@ export default function EventsPage() {
     setEvents(await res.json());
   }
 
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load(); }, []);
 
   async function createEvent() {
-    if (!name.trim() || !date) return;
+    if (!name.trim() || !startDate) return;
+    if (endDate && endDate < startDate) return;
     setSaving(true);
     await fetch("/api/events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), date }),
+      body: JSON.stringify({ name: name.trim(), startDate, endDate: endDate || null }),
     });
     setName("");
-    setDate("");
+    setStartDate("");
+    setEndDate("");
     setShowModal(false);
     setSaving(false);
     load();
   }
 
-  function deleteEvent(id: number, name: string, e: React.MouseEvent) {
+  function deleteEvent(id: number, evName: string, e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    setDeleteTarget({ id, name });
+    setDeleteTarget({ id, name: evName });
   }
 
   function openEdit(ev: EventSummary, e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    setEditTarget({ id: ev.id, name: ev.name, date: ev.date.slice(0, 10) });
+    setEditTarget(ev);
     setEditName(ev.name);
-    setEditDate(ev.date.slice(0, 10));
+    setEditStartDate(ev.startDate.slice(0, 10));
+    setEditEndDate(ev.endDate ? ev.endDate.slice(0, 10) : "");
   }
 
   async function saveEdit() {
-    if (!editTarget || !editName.trim() || !editDate) return;
+    if (!editTarget || !editName.trim() || !editStartDate) return;
+    if (editEndDate && editEndDate < editStartDate) return;
     setEditSaving(true);
     await fetch(`/api/events/${editTarget.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: editName.trim(), date: editDate }),
+      body: JSON.stringify({ name: editName.trim(), startDate: editStartDate, endDate: editEndDate || null }),
     });
     setEditSaving(false);
     setEditTarget(null);
@@ -84,10 +89,13 @@ export default function EventsPage() {
     load();
   }
 
-  function fmtDate(s: string) {
-    const part = s.slice(0, 10);
-    const [y, m, d] = part.split("-");
-    return `${y}/${m}/${d}`;
+  function fmtDateRange(startIso: string, endIso: string | null) {
+    const [sy, sm, sd] = startIso.slice(0, 10).split("-");
+    const start = `${sy}/${sm}/${sd}`;
+    if (!endIso) return start;
+    const [, em, ed] = endIso.slice(0, 10).split("-");
+    const days = Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 86400000) + 1;
+    return `${start} ~ ${em}/${ed}（${days}天）`;
   }
 
   return (
@@ -137,7 +145,7 @@ export default function EventsPage() {
                     {ev.name}
                   </div>
                   <div style={{ fontSize: 13, color: "var(--text-sub)", marginBottom: 10 }}>
-                    📅 {fmtDate(ev.date)}
+                    📅 {fmtDateRange(ev.startDate, ev.endDate)}
                   </div>
                   <div style={{ display: "flex", gap: 16, fontSize: 13, color: "var(--text-sub)" }}>
                     <span>👥 {ev.participants.length} 位參與者</span>
@@ -159,28 +167,31 @@ export default function EventsPage() {
             </h2>
             <div style={{ marginBottom: 14 }}>
               <label style={label}>活動名稱</label>
-              <input
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                style={input}
-                autoFocus
-              />
+              <input value={editName} onChange={(e) => setEditName(e.target.value)} style={input} autoFocus />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={label}>出發日期</label>
+              <input type="date" value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} style={input} />
             </div>
             <div style={{ marginBottom: 24 }}>
-              <label style={label}>活動日期</label>
+              <label style={label}>結束日期 <span style={{ fontWeight: 400, opacity: 0.7 }}>（選填）</span></label>
               <input
                 type="date"
-                value={editDate}
-                onChange={(e) => setEditDate(e.target.value)}
-                style={input}
+                value={editEndDate}
+                min={editStartDate}
+                onChange={(e) => setEditEndDate(e.target.value)}
+                style={{ ...input, borderColor: editEndDate && editEndDate < editStartDate ? "var(--morandi-red)" : undefined }}
               />
+              {editEndDate && editEndDate < editStartDate && (
+                <p style={{ fontSize: 12, color: "var(--morandi-red)", margin: "4px 0 0" }}>結束日期不能早於出發日期</p>
+              )}
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => setEditTarget(null)} style={ghostBtn}>取消</button>
               <button
                 onClick={saveEdit}
-                disabled={editSaving || !editName.trim() || !editDate}
-                style={{ ...accentBtn, flex: 1, opacity: editSaving || !editName.trim() || !editDate ? 0.5 : 1 }}
+                disabled={editSaving || !editName.trim() || !editStartDate || !!(editEndDate && editEndDate < editStartDate)}
+                style={{ ...accentBtn, flex: 1, opacity: editSaving || !editName.trim() || !editStartDate || !!(editEndDate && editEndDate < editStartDate) ? 0.5 : 1 }}
               >
                 {editSaving ? <><span className="spinner" />儲存中...</> : "儲存"}
               </button>
@@ -200,22 +211,10 @@ export default function EventsPage() {
               「{deleteTarget.name}」及其所有費用、成員、還款紀錄將一併刪除，無法復原。
             </p>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setDeleteTarget(null)} style={ghostBtn}>
-                取消
-              </button>
+              <button onClick={() => setDeleteTarget(null)} style={ghostBtn}>取消</button>
               <button
                 onClick={confirmDelete}
-                style={{
-                  flex: 1,
-                  padding: "10px 0",
-                  background: "var(--morandi-red)",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 8,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
+                style={{ flex: 1, padding: "10px 0", background: "var(--morandi-red)", color: "white", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" }}
               >
                 確定刪除
               </button>
@@ -231,36 +230,33 @@ export default function EventsPage() {
             <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>
               新增活動
             </h2>
-
             <div style={{ marginBottom: 14 }}>
               <label style={label}>活動名稱</label>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="例：墾丁三天兩夜"
-                style={input}
-                autoFocus
-              />
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="例：墾丁三天兩夜" style={input} autoFocus />
             </div>
-
+            <div style={{ marginBottom: 14 }}>
+              <label style={label}>出發日期</label>
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={input} />
+            </div>
             <div style={{ marginBottom: 24 }}>
-              <label style={label}>活動日期</label>
+              <label style={label}>結束日期 <span style={{ fontWeight: 400, opacity: 0.7 }}>（選填）</span></label>
               <input
                 type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                style={input}
+                value={endDate}
+                min={startDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                style={{ ...input, borderColor: endDate && endDate < startDate ? "var(--morandi-red)" : undefined }}
               />
+              {endDate && endDate < startDate && (
+                <p style={{ fontSize: 12, color: "var(--morandi-red)", margin: "4px 0 0" }}>結束日期不能早於出發日期</p>
+              )}
             </div>
-
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setShowModal(false)} style={ghostBtn}>
-                取消
-              </button>
+              <button onClick={() => setShowModal(false)} style={ghostBtn}>取消</button>
               <button
                 onClick={createEvent}
-                disabled={saving || !name.trim() || !date}
-                style={{ ...accentBtn, flex: 1, opacity: saving || !name.trim() || !date ? 0.5 : 1 }}
+                disabled={saving || !name.trim() || !startDate || !!(endDate && endDate < startDate)}
+                style={{ ...accentBtn, flex: 1, opacity: saving || !name.trim() || !startDate || !!(endDate && endDate < startDate) ? 0.5 : 1 }}
               >
                 {saving ? <><span className="spinner" />建立中...</> : "建立活動"}
               </button>
