@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
@@ -46,6 +46,17 @@ type Transfer = {
 };
 
 type SettlementData = { settlements: Transfer[]; balances: Balance[] };
+
+type Repayment = {
+  id: number;
+  fromId: number;
+  toId: number;
+  amount: number;
+  note: string | null;
+  createdAt: string;
+  fromParticipant: Participant;
+  toParticipant: Participant;
+};
 
 type Tab = "members" | "expenses" | "settlement";
 type SplitMode = "equal" | "custom";
@@ -98,6 +109,10 @@ function buildCustomShares(
   });
 }
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const EMOJI_LIST = ["🌸", "🎈", "🐳", "🦔", "🐢", "👼", "🌹", "🌞", "🎵", "🌙", "🐶", "🍀"];
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function EventDetailPage() {
@@ -110,10 +125,18 @@ export default function EventDetailPage() {
 
   // Members state
   const [newName, setNewName] = useState("");
+  const [selectedEmoji, setSelectedEmoji] = useState("");
   const [addingMember, setAddingMember] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmoji, setEditEmoji] = useState(EMOJI_LIST[0]);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingMemberId, setDeletingMemberId] = useState<number | null>(null);
+  const [deletingExpId, setDeletingExpId] = useState<number | null>(null);
 
   // Expense modal state
   const [showExpModal, setShowExpModal] = useState(false);
+  const [editingExpId, setEditingExpId] = useState<number | null>(null);
   const [expTitle, setExpTitle] = useState("");
   const [expAmount, setExpAmount] = useState("");
   const [expPaidById, setExpPaidById] = useState<number | "">("");
@@ -126,6 +149,21 @@ export default function EventDetailPage() {
   const [settlement, setSettlement] = useState<SettlementData | null>(null);
   const [settlementLoading, setSettlementLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Repayment state
+  const [repayments, setRepayments] = useState<Repayment[]>([]);
+  const [showRepayModal, setShowRepayModal] = useState(false);
+  const [editingRepayId, setEditingRepayId] = useState<number | null>(null);
+  const [repayFromId, setRepayFromId] = useState<number | "">("");
+  const [repayToId, setRepayToId] = useState<number | "">("");
+  const [repayAmount, setRepayAmount] = useState("");
+  const [repayNote, setRepayNote] = useState("");
+  const [repayPayMethod, setRepayPayMethod] = useState("");
+  const [savingRepay, setSavingRepay] = useState(false);
+  const [deletingRepayId, setDeletingRepayId] = useState<number | null>(null);
+
+  // SSE state
+  const [sseStatus, setSseStatus] = useState<"connected" | "reconnecting">("reconnecting");
 
   // ── Data fetching ────────────────────────────────────────────────────────────
 
@@ -145,9 +183,73 @@ export default function EventDetailPage() {
     setSettlementLoading(false);
   }, [eventId]);
 
+  const fetchRepayments = useCallback(async () => {
+    const res = await fetch(`/api/events/${eventId}/repayments`);
+    if (res.ok) setRepayments(await res.json());
+  }, [eventId]);
+
   useEffect(() => {
-    if (tab === "settlement") fetchSettlement();
-  }, [tab, fetchSettlement]);
+    if (tab === "settlement") {
+      fetchSettlement();
+      fetchRepayments();
+    }
+  }, [tab, fetchSettlement, fetchRepayments]);
+
+  // ── SSE ────────────────────────────────────────────────────────────────────────
+
+  // Ref keeps latest callbacks without changing SSE effect deps
+  const onSseUpdateRef = useRef(() => {
+    fetchEvent();
+    fetchSettlement();
+    fetchRepayments();
+  });
+  useEffect(() => {
+    onSseUpdateRef.current = () => {
+      fetchEvent();
+      fetchSettlement();
+      fetchRepayments();
+    };
+  }, [fetchEvent, fetchSettlement, fetchRepayments]);
+
+  useEffect(() => {
+    let es: EventSource;
+    let reconnectTimer: ReturnType<typeof setTimeout>;
+    let cancelled = false;
+
+    function connect() {
+      if (cancelled) return;
+      es = new EventSource(`/api/events/${eventId}/stream`);
+
+      es.onopen = () => {
+        if (!cancelled) setSseStatus("connected");
+      };
+
+      es.onmessage = (e) => {
+        if (cancelled) return;
+        try {
+          const data = JSON.parse(e.data) as { type: string };
+          if (data.type !== "heartbeat" && data.type !== "connected") {
+            onSseUpdateRef.current();
+          }
+        } catch {}
+      };
+
+      es.onerror = () => {
+        if (cancelled) return;
+        setSseStatus("reconnecting");
+        es.close();
+        reconnectTimer = setTimeout(connect, 3000);
+      };
+    }
+
+    connect();
+
+    return () => {
+      cancelled = true;
+      es?.close();
+      clearTimeout(reconnectTimer);
+    };
+  }, [eventId]);
 
   // ── Members ───────────────────────────────────────────────────────────────────
 
@@ -157,22 +259,44 @@ export default function EventDetailPage() {
     await fetch(`/api/events/${eventId}/participants`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName.trim(), emoji: "🙂" }),
+      body: JSON.stringify({ name: newName.trim(), emoji: selectedEmoji }),
     });
     setNewName("");
+    setSelectedEmoji("");
     setAddingMember(false);
     fetchEvent();
   }
 
+  async function updateMember() {
+    if (!editName.trim() || editingId === null) return;
+    setSavingEdit(true);
+    await fetch(`/api/events/${eventId}/participants`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: editingId, name: editName.trim(), emoji: editEmoji }),
+    });
+    setSavingEdit(false);
+    setEditingId(null);
+    fetchEvent();
+  }
+
+  function startEdit(p: Participant) {
+    setEditingId(p.id);
+    setEditName(p.name);
+    setEditEmoji(p.emoji);
+  }
+
   async function deleteMember(pid: number) {
-    if (!confirm("確定要刪除這位成員嗎？")) return;
+    if (!confirm("確定要刪除這位成員嗎？\n若有相關費用記錄將無法刪除。")) return;
+    setDeletingMemberId(pid);
     const res = await fetch(`/api/events/${eventId}/participants`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: pid }),
     });
+    setDeletingMemberId(null);
     if (!res.ok) {
-      alert("無法刪除：請先刪除此成員相關的費用記錄");
+      alert("❌ 無法刪除：此成員有相關費用記錄，請先刪除費用後再試。");
       return;
     }
     fetchEvent();
@@ -183,6 +307,7 @@ export default function EventDetailPage() {
   function openExpModal() {
     if (!event) return;
     const ids = event.participants.map((p) => p.id);
+    setEditingExpId(null);
     setEqualSelected(new Set(ids));
     const n = ids.length;
     if (n > 0) {
@@ -198,6 +323,41 @@ export default function EventDetailPage() {
     setExpAmount("");
     setExpPaidById(ids[0] ?? "");
     setSplitMode("equal");
+    setShowExpModal(true);
+  }
+
+  function openExpEditModal(exp: Expense) {
+    if (!event) return;
+    const allIds = event.participants.map((p) => p.id);
+    setEditingExpId(exp.id);
+    setExpTitle(exp.title);
+    setExpAmount(String(exp.amount));
+    setExpPaidById(exp.paidById);
+
+    const shareIds = exp.shares.map((s) => s.participantId);
+    const isEqual =
+      exp.shares.length > 0 &&
+      exp.shares.every((s) => Math.abs(s.shareRatio - exp.shares[0].shareRatio) < 0.01);
+
+    if (isEqual) {
+      setSplitMode("equal");
+      setEqualSelected(new Set(shareIds));
+      const n = allIds.length;
+      if (n > 0) {
+        const base = Math.floor(100 / n);
+        const rem = 100 - base * n;
+        setCustomRatios(Object.fromEntries(allIds.map((id, i) => [id, String(i === 0 ? base + rem : base)])));
+      }
+    } else {
+      setSplitMode("custom");
+      setEqualSelected(new Set(shareIds));
+      const ratioMap: Record<number, string> = {};
+      for (const id of allIds) {
+        const share = exp.shares.find((s) => s.participantId === id);
+        ratioMap[id] = share ? String(Math.round(share.shareRatio * 100)) : "0";
+      }
+      setCustomRatios(ratioMap);
+    }
     setShowExpModal(true);
   }
 
@@ -225,29 +385,93 @@ export default function EventDetailPage() {
     }
 
     setSavingExp(true);
-    await fetch(`/api/events/${eventId}/expenses`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        paidById: expPaidById,
-        title: expTitle.trim(),
-        amount: total,
-        shares,
-      }),
-    });
+    if (editingExpId !== null) {
+      await fetch(`/api/events/${eventId}/expenses`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editingExpId, paidById: expPaidById, title: expTitle.trim(), amount: total, shares }),
+      });
+    } else {
+      await fetch(`/api/events/${eventId}/expenses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paidById: expPaidById, title: expTitle.trim(), amount: total, shares }),
+      });
+    }
     setSavingExp(false);
     setShowExpModal(false);
+    setEditingExpId(null);
     fetchEvent();
   }
 
   async function deleteExpense(expId: number) {
     if (!confirm("確定要刪除這筆費用嗎？")) return;
+    setDeletingExpId(expId);
     await fetch(`/api/events/${eventId}/expenses`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: expId }),
     });
+    setDeletingExpId(null);
     fetchEvent();
+  }
+
+  // ── Repayments ────────────────────────────────────────────────────────────────
+
+  function openRepayModal(r?: Repayment) {
+    if (!event) return;
+    if (r) {
+      setEditingRepayId(r.id);
+      setRepayFromId(r.fromId);
+      setRepayToId(r.toId);
+      setRepayAmount(String(r.amount));
+      setRepayNote(r.note ?? "");
+      const knownMethods = ["💚 Line Pay", "🏦 銀行轉帳", "💵 現金"];
+      setRepayPayMethod(knownMethods.includes(r.note ?? "") ? r.note! : "");
+    } else {
+      setEditingRepayId(null);
+      setRepayFromId(event.participants[0]?.id ?? "");
+      setRepayToId(event.participants[1]?.id ?? "");
+      setRepayAmount("");
+      setRepayNote("");
+      setRepayPayMethod("");
+    }
+    setShowRepayModal(true);
+  }
+
+  async function addRepayment() {
+    if (repayFromId === "" || repayToId === "" || !repayAmount || repayFromId === repayToId) return;
+    setSavingRepay(true);
+    if (editingRepayId !== null) {
+      await fetch(`/api/events/${eventId}/repayments`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editingRepayId, fromId: repayFromId, toId: repayToId, amount: Number(repayAmount), note: repayNote }),
+      });
+    } else {
+      await fetch(`/api/events/${eventId}/repayments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fromId: repayFromId, toId: repayToId, amount: Number(repayAmount), note: repayNote }),
+      });
+    }
+    setSavingRepay(false);
+    setShowRepayModal(false);
+    fetchSettlement();
+    fetchRepayments();
+  }
+
+  async function deleteRepayment(rid: number) {
+    if (!confirm("確定要刪除這筆還款紀錄嗎？")) return;
+    setDeletingRepayId(rid);
+    await fetch(`/api/events/${eventId}/repayments`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: rid }),
+    });
+    setDeletingRepayId(null);
+    fetchSettlement();
+    fetchRepayments();
   }
 
   // ── Settlement ────────────────────────────────────────────────────────────────
@@ -260,7 +484,7 @@ export default function EventDetailPage() {
     } else {
       settlement.settlements.forEach((s) => {
         lines.push(
-          `💸 ${s.from.emoji}${s.from.name} 付給 ${s.to.emoji}${s.to.name}：${fmtNT(s.amount)}`
+          `💸 ${s.from.name} 付給 ${s.to.name}：${fmtNT(s.amount)}`
         );
       });
       lines.push("✅ 結算完成！");
@@ -322,7 +546,27 @@ export default function EventDetailPage() {
             <p style={{ fontSize: 12, color: "var(--text-sub)", margin: "2px 0 0" }}>
               📅 {fmtDate(event.date)} · {event.participants.length} 位成員
             </p>
+            {(() => {
+              const total = event.expenses.reduce((s, e) => s + e.amount, 0);
+              const avg = event.participants.length > 0 ? Math.round(total / event.participants.length) : 0;
+              return (
+                <p style={{ fontSize: 11, color: "var(--text-sub)", margin: "2px 0 0", opacity: 0.85 }}>
+                  💰 總花費 {fmtNT(total)}　👤 人均 {fmtNT(avg)}　📋 {event.expenses.length} 筆費用
+                </p>
+              );
+            })()}
           </div>
+          <div
+            title={sseStatus === "connected" ? "即時同步中" : "重新連線中"}
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              flexShrink: 0,
+              background: sseStatus === "connected" ? "var(--morandi-green)" : "var(--separator)",
+              transition: "background 0.4s",
+            }}
+          />
         </div>
 
         {/* ── Tabs ── */}
@@ -355,42 +599,132 @@ export default function EventDetailPage() {
           {/* ────────────── Members Tab ────────────── */}
           {tab === "members" && (
             <div>
-              <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-                <input
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addMember()}
-                  placeholder="輸入成員名稱"
-                  style={{ ...inputSt, flex: 1 }}
-                />
-                <button
-                  onClick={addMember}
-                  disabled={addingMember || !newName.trim()}
-                  style={{ ...accentBtnSt, opacity: addingMember || !newName.trim() ? 0.5 : 1 }}
-                >
-                  新增
-                </button>
+              {/* Add member panel */}
+              <div style={{
+                background: "var(--bg-card)",
+                border: "1px solid var(--border)",
+                borderRadius: 12,
+                padding: "14px 14px 12px",
+                marginBottom: 20,
+              }}>
+                <p style={{ fontSize: 12, color: "var(--text-sub)", fontWeight: 600, margin: "0 0 10px" }}>選擇頭像</p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+                  {EMOJI_LIST.map((e) => (
+                    <button
+                      key={e}
+                      onClick={() => setSelectedEmoji(e)}
+                      style={{
+                        width: 38, height: 38,
+                        fontSize: 20,
+                        borderRadius: 8,
+                        border: selectedEmoji === e ? "2px solid var(--accent)" : "2px solid transparent",
+                        background: selectedEmoji === e ? "var(--bg-main)" : "transparent",
+                        cursor: "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        transition: "all 0.12s",
+                        boxShadow: selectedEmoji === e ? "0 0 0 1px var(--accent)" : "none",
+                      }}
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && addMember()}
+                    placeholder="輸入成員名稱"
+                    style={{ ...inputSt, flex: 1 }}
+                  />
+                  <button
+                    onClick={addMember}
+                    disabled={addingMember || !newName.trim() || !selectedEmoji}
+                    style={{ ...accentBtnSt, opacity: addingMember || !newName.trim() || !selectedEmoji ? 0.5 : 1 }}
+                  >
+                    {addingMember ? <><span className="spinner" />處理中...</> : "新增"}
+                  </button>
+                </div>
               </div>
 
               {event.participants.length === 0 ? (
                 <EmptyState icon="👤" text="還沒有成員，先新增幾位吧！" />
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {event.participants.map((p) => (
-                    <div key={p.id} style={rowCard}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ fontSize: 26 }}>{p.emoji}</span>
-                        <span style={{ fontWeight: 600, fontSize: 15 }}>{p.name}</span>
+                  {event.participants.map((p) =>
+                    editingId === p.id ? (
+                      /* ── Inline edit mode ── */
+                      <div key={p.id} style={{ ...rowCard, flexDirection: "column", alignItems: "stretch", gap: 10 }}>
+                        <p style={{ fontSize: 12, color: "var(--text-sub)", fontWeight: 600, margin: 0 }}>更換頭像</p>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          {EMOJI_LIST.map((e) => (
+                            <button
+                              key={e}
+                              onClick={() => setEditEmoji(e)}
+                              style={{
+                                width: 36, height: 36,
+                                fontSize: 19,
+                                borderRadius: 8,
+                                border: editEmoji === e ? "2px solid var(--accent)" : "2px solid transparent",
+                                background: editEmoji === e ? "var(--bg-main)" : "transparent",
+                                cursor: "pointer",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                transition: "all 0.12s",
+                                boxShadow: editEmoji === e ? "0 0 0 1px var(--accent)" : "none",
+                              }}
+                            >
+                              {e}
+                            </button>
+                          ))}
+                        </div>
+                        <input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && updateMember()}
+                          autoFocus
+                          style={inputSt}
+                        />
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            style={{ ...ghostBtnSt, flex: 1 }}
+                          >
+                            取消
+                          </button>
+                          <button
+                            onClick={updateMember}
+                            disabled={savingEdit || !editName.trim()}
+                            style={{ ...accentBtnSt, flex: 2, opacity: savingEdit || !editName.trim() ? 0.5 : 1 }}
+                          >
+                            {savingEdit ? <><span className="spinner" />儲存中...</> : "確認"}
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => deleteMember(p.id)}
-                        style={deleteIconBtn}
-                        title="刪除成員"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  ))}
+                    ) : (
+                      /* ── Normal card ── */
+                      <div key={p.id} style={rowCard}>
+                        <span style={{ fontWeight: 600, fontSize: 15 }}>{p.name}</span>
+                        <div style={{ display: "flex", gap: 2 }}>
+                          <button
+                            onClick={() => startEdit(p)}
+                            disabled={deletingMemberId === p.id}
+                            style={{ ...deleteIconBtn, fontSize: 15, opacity: deletingMemberId === p.id ? 0.35 : 1 }}
+                            title="編輯成員"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => deleteMember(p.id)}
+                            disabled={deletingMemberId === p.id}
+                            style={{ ...deleteIconBtn, fontSize: 15, opacity: deletingMemberId === p.id ? 0.35 : 1, minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
+                            title="刪除成員"
+                          >
+                            {deletingMemberId === p.id ? <span className="spinner-sm" /> : "🗑️"}
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  )}
                 </div>
               )}
             </div>
@@ -431,12 +765,27 @@ export default function EventDetailPage() {
                             {fmtNT(exp.amount)}
                           </div>
                         </div>
-                        <button onClick={() => deleteExpense(exp.id)} style={deleteIconBtn} title="刪除費用">
-                          🗑️
-                        </button>
+                        <div style={{ display: "flex", gap: 2 }}>
+                          <button
+                            onClick={() => openExpEditModal(exp)}
+                            disabled={deletingExpId === exp.id}
+                            style={{ ...deleteIconBtn, opacity: deletingExpId === exp.id ? 0.35 : 1 }}
+                            title="編輯費用"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => deleteExpense(exp.id)}
+                            disabled={deletingExpId === exp.id}
+                            style={{ ...deleteIconBtn, opacity: deletingExpId === exp.id ? 0.35 : 1, minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
+                            title="刪除費用"
+                          >
+                            {deletingExpId === exp.id ? <span className="spinner-sm" /> : "🗑️"}
+                          </button>
+                        </div>
                       </div>
                       <div style={{ display: "flex", gap: 14, fontSize: 12, color: "var(--text-sub)", marginTop: 10 }}>
-                        <span>💳 {exp.paidBy.emoji}{exp.paidBy.name} 付款</span>
+                        <span>💳 {exp.paidBy.name} 付款</span>
                         <span>👥 {exp.shares.length} 人分攤</span>
                       </div>
                     </div>
@@ -450,9 +799,7 @@ export default function EventDetailPage() {
           {tab === "settlement" && (
             <div>
               {settlementLoading ? (
-                <div style={{ textAlign: "center", padding: "48px 0", color: "var(--text-sub)" }}>
-                  計算中...
-                </div>
+                <SettlementLoadingView />
               ) : settlement ? (
                 <>
                   {/* Balances */}
@@ -460,7 +807,7 @@ export default function EventDetailPage() {
                   <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
                     {settlement.balances.map((b) => (
                       <div key={b.participantId} style={rowCard}>
-                        <span style={{ fontSize: 15 }}>{b.emoji} {b.name}</span>
+                        <span style={{ fontSize: 15 }}>{b.name}</span>
                         <div style={{ textAlign: "right" }}>
                           <span style={{
                             fontWeight: 700,
@@ -475,7 +822,7 @@ export default function EventDetailPage() {
                           </span>
                           {b.balance !== 0 && (
                             <div style={{ fontSize: 11, color: b.balance > 0 ? "var(--morandi-green)" : "var(--morandi-red)", marginTop: 1 }}>
-                              {b.balance > 0 ? "被欠" : "欠人"}
+                              {b.balance > 0 ? "待收" : "未償"}
                             </div>
                           )}
                         </div>
@@ -504,9 +851,9 @@ export default function EventDetailPage() {
                       {settlement.settlements.map((s, i) => (
                         <div key={i} style={{ ...rowCard, gap: 8 }}>
                           <span style={{ fontSize: 14, flex: 1 }}>
-                            💸 <strong>{s.from.emoji}{s.from.name}</strong>
+                            💸 <strong>{s.from.name}</strong>
                             <span style={{ color: "var(--text-sub)" }}> 付給 </span>
-                            <strong>{s.to.emoji}{s.to.name}</strong>
+                            <strong>{s.to.name}</strong>
                           </span>
                           <span style={{ fontWeight: 700, color: "var(--accent)", fontSize: 15, whiteSpace: "nowrap" }}>
                             {fmtNT(s.amount)}
@@ -515,6 +862,65 @@ export default function EventDetailPage() {
                       ))}
                     </div>
                   )}
+
+                  {/* Repayment records */}
+                  <SectionLabel text="還款紀錄" />
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+                    {repayments.map((r) => (
+                      <div key={r.id} style={rowCard}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ fontSize: 14 }}>
+                            <strong>{r.fromParticipant.name}</strong>
+                            <span style={{ color: "var(--text-sub)" }}> 還給 </span>
+                            <strong>{r.toParticipant.name}</strong>
+                          </span>
+                          <div style={{ display: "flex", gap: 10, marginTop: 3, alignItems: "center" }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--morandi-green)" }}>{fmtNT(r.amount)}</span>
+                            {r.note && <span style={{ fontSize: 12, color: "var(--text-sub)" }}>{r.note}</span>}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+                          <button
+                            onClick={() => openRepayModal(r)}
+                            disabled={deletingRepayId === r.id}
+                            style={{ ...deleteIconBtn, opacity: deletingRepayId === r.id ? 0.35 : 1 }}
+                            title="編輯還款紀錄"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => deleteRepayment(r.id)}
+                            disabled={deletingRepayId === r.id}
+                            style={{ ...deleteIconBtn, minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center", opacity: deletingRepayId === r.id ? 0.35 : 1 }}
+                            title="刪除還款紀錄"
+                          >
+                            {deletingRepayId === r.id ? <span className="spinner-sm" /> : "🗑️"}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    {repayments.length === 0 && (
+                      <div style={{ textAlign: "center", padding: "12px 0", fontSize: 13, color: "var(--text-sub)" }}>
+                        尚無還款紀錄
+                      </div>
+                    )}
+                    <button
+                      onClick={() => openRepayModal()}
+                      disabled={!event || event.participants.length < 2}
+                      style={{
+                        width: "100%",
+                        padding: "10px 0",
+                        borderRadius: 10,
+                        border: "1px dashed var(--border)",
+                        background: "transparent",
+                        color: "var(--text-sub)",
+                        fontSize: 13,
+                        cursor: "pointer",
+                      }}
+                    >
+                      ＋ 新增還款紀錄
+                    </button>
+                  </div>
 
                   {/* Copy + Refresh */}
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -578,7 +984,9 @@ export default function EventDetailPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ width: 36, height: 4, background: "var(--border)", borderRadius: 2, margin: "0 auto 20px" }} />
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>新增費用</h2>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>
+              {editingExpId !== null ? "編輯費用" : "新增費用"}
+            </h2>
 
             {/* Title */}
             <Field label="費用標題">
@@ -611,7 +1019,7 @@ export default function EventDetailPage() {
                 style={inputSt}
               >
                 {event.participants.map((p) => (
-                  <option key={p.id} value={p.id}>{p.emoji} {p.name}</option>
+                  <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
             </Field>
@@ -674,7 +1082,7 @@ export default function EventDetailPage() {
                           }}
                           style={{ accentColor: "var(--accent)", width: 16, height: 16 }}
                         />
-                        <span style={{ flex: 1, fontSize: 14 }}>{p.emoji} {p.name}</span>
+                        <span style={{ flex: 1, fontSize: 14 }}>{p.name}</span>
                         {checked && equalPerPerson > 0 && (
                           <span style={{ fontSize: 12, color: "var(--text-sub)" }}>
                             {fmtNT(equalPerPerson)}
@@ -723,7 +1131,7 @@ export default function EventDetailPage() {
                           padding: "10px 12px",
                         }}
                       >
-                        <span style={{ flex: 1, fontSize: 14 }}>{p.emoji} {p.name}</span>
+                        <span style={{ flex: 1, fontSize: 14 }}>{p.name}</span>
                         <input
                           type="number"
                           value={customRatios[p.id] ?? "0"}
@@ -781,7 +1189,126 @@ export default function EventDetailPage() {
                       : 1,
                 }}
               >
-                {savingExp ? "儲存中..." : "新增費用"}
+                {savingExp ? <><span className="spinner" />處理中...</> : editingExpId !== null ? "儲存變更" : "新增費用"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ────────────── Repayment Modal ────────────── */}
+      {showRepayModal && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(92,82,72,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 50 }}
+          onClick={() => setShowRepayModal(false)}
+        >
+          <div
+            style={{
+              background: "var(--bg-main)",
+              border: "1px solid var(--border)",
+              borderRadius: "20px 20px 0 0",
+              padding: "24px 16px 32px",
+              width: "100%",
+              maxWidth: 640,
+              maxHeight: "85dvh",
+              overflowY: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ width: 36, height: 4, background: "var(--border)", borderRadius: 2, margin: "0 auto 20px" }} />
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>
+              {editingRepayId !== null ? "編輯還款紀錄" : "新增還款紀錄"}
+            </h2>
+
+            <Field label="誰還款">
+              <select
+                value={repayFromId}
+                onChange={(e) => setRepayFromId(Number(e.target.value))}
+                style={inputSt}
+              >
+                {event.participants.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="還給誰">
+              <select
+                value={repayToId}
+                onChange={(e) => setRepayToId(Number(e.target.value))}
+                style={inputSt}
+              >
+                {event.participants.map((p) => (
+                  <option key={p.id} value={p.id} disabled={p.id === repayFromId}>{p.name}</option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="金額（元）">
+              <input
+                type="number"
+                value={repayAmount}
+                onChange={(e) => setRepayAmount(e.target.value)}
+                placeholder="0"
+                min={1}
+                style={inputSt}
+                autoFocus
+              />
+            </Field>
+
+            <Field label="付款方式">
+              <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                {(["💚 Line Pay", "🏦 銀行轉帳", "💵 現金"] as const).map((method) => (
+                  <button
+                    key={method}
+                    onClick={() => {
+                      const next = repayPayMethod === method ? "" : method;
+                      setRepayPayMethod(next);
+                      setRepayNote(next);
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: "8px 4px",
+                      borderRadius: 8,
+                      border: "1px solid var(--border)",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      background: repayPayMethod === method ? "var(--morandi-purple, #b39dac)" : "var(--bg-card)",
+                      color: repayPayMethod === method ? "white" : "var(--text-sub)",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    {method}
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            <Field label="備註（選填）">
+              <input
+                value={repayNote}
+                onChange={(e) => {
+                  setRepayNote(e.target.value);
+                  const knownMethods = ["💚 Line Pay", "🏦 銀行轉帳", "💵 現金"];
+                  if (!knownMethods.includes(e.target.value)) setRepayPayMethod("");
+                }}
+                placeholder="例：Line Pay 轉帳"
+                style={inputSt}
+              />
+            </Field>
+
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button onClick={() => setShowRepayModal(false)} style={ghostBtnSt}>取消</button>
+              <button
+                onClick={addRepayment}
+                disabled={savingRepay || repayFromId === "" || repayToId === "" || !repayAmount || repayFromId === repayToId}
+                style={{
+                  ...accentBtnSt,
+                  flex: 1,
+                  opacity: savingRepay || repayFromId === "" || repayToId === "" || !repayAmount || repayFromId === repayToId ? 0.5 : 1,
+                }}
+              >
+                {savingRepay ? <><span className="spinner" />處理中...</> : editingRepayId !== null ? "儲存變更" : "新增紀錄"}
               </button>
             </div>
           </div>
@@ -792,6 +1319,46 @@ export default function EventDetailPage() {
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
+
+function RollingDigit({ speed }: { speed: number }) {
+  const [n, setN] = useState(() => Math.floor(Math.random() * 10));
+  useEffect(() => {
+    const t = setInterval(() => setN((v) => (v + 1) % 10), speed);
+    return () => clearInterval(t);
+  }, [speed]);
+  return (
+    <span style={{ display: "inline-block", width: "0.58em", textAlign: "center" }}>
+      {n}
+    </span>
+  );
+}
+
+function SettlementLoadingView() {
+  return (
+    <div style={{ textAlign: "center", padding: "52px 0 44px" }}>
+      <div style={{ fontSize: 52, lineHeight: 1, marginBottom: 18 }}>🧮</div>
+      <div style={{
+        fontFamily: "monospace",
+        fontSize: 26,
+        fontWeight: 700,
+        color: "var(--accent)",
+        letterSpacing: "0.08em",
+        marginBottom: 14,
+      }}>
+        <RollingDigit speed={85} />
+        <RollingDigit speed={120} />
+        <RollingDigit speed={97} />
+        <span style={{ opacity: 0.35, margin: "0 1px" }}>,</span>
+        <RollingDigit speed={110} />
+        <RollingDigit speed={74} />
+        <RollingDigit speed={91} />
+      </div>
+      <p style={{ fontSize: 13, color: "var(--text-sub)", margin: 0, letterSpacing: "0.06em" }}>
+        計算中
+      </p>
+    </div>
+  );
+}
 
 function EmptyState({ icon, text }: { icon: string; text: string }) {
   return (

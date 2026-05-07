@@ -8,12 +8,10 @@ export async function GET(
   const { id } = await params;
   const eventId = Number(id);
 
-  const [expenses, participants] = await Promise.all([
-    db.expense.findMany({
-      where: { eventId },
-      include: { shares: true },
-    }),
+  const [expenses, participants, repayments] = await Promise.all([
+    db.expense.findMany({ where: { eventId }, include: { shares: true } }),
     db.participant.findMany({ where: { eventId } }),
+    db.repayment.findMany({ where: { eventId } }),
   ]);
 
   // 每人淨餘額（正 = 被欠錢，負 = 欠人錢）
@@ -32,6 +30,12 @@ export async function GET(
         (balanceMap.get(share.participantId) ?? 0) - share.amount
       );
     }
+  }
+
+  // 還款調整：還款者欠款減少（+），收款者被欠減少（-）
+  for (const r of repayments) {
+    balanceMap.set(r.fromId, (balanceMap.get(r.fromId) ?? 0) + r.amount);
+    balanceMap.set(r.toId, (balanceMap.get(r.toId) ?? 0) - r.amount);
   }
 
   const balances = participants.map((p) => ({

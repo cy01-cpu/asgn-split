@@ -17,6 +17,8 @@ export default function EventsPage() {
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
   async function load() {
     const res = await fetch("/api/events");
@@ -42,11 +44,18 @@ export default function EventsPage() {
     load();
   }
 
-  async function deleteEvent(id: number, e: React.MouseEvent) {
+  function deleteEvent(id: number, name: string, e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    if (!confirm("確定要刪除這個活動嗎？此操作無法復原。")) return;
-    await fetch(`/api/events/${id}`, { method: "DELETE" });
+    setDeleteTarget({ id, name });
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeletingId(deleteTarget.id);
+    setDeleteTarget(null);
+    await fetch(`/api/events/${deleteTarget.id}`, { method: "DELETE" });
+    setDeletingId(null);
     load();
   }
 
@@ -82,11 +91,12 @@ export default function EventsPage() {
               <Link key={ev.id} href={`/events/${ev.id}`} style={{ textDecoration: "none" }}>
                 <div style={cardStyle}>
                   <button
-                    onClick={(e) => deleteEvent(ev.id, e)}
-                    style={ghostDeleteBtn}
+                    onClick={(e) => deleteEvent(ev.id, ev.name, e)}
+                    disabled={deletingId === ev.id}
+                    style={{ ...ghostDeleteBtn, opacity: deletingId === ev.id ? 0.45 : 1, cursor: deletingId === ev.id ? "not-allowed" : "pointer" }}
                     title="刪除活動"
                   >
-                    🗑️
+                    {deletingId === ev.id ? <span className="spinner-sm" /> : "🗑️"}
                   </button>
                   <div style={{ fontWeight: 600, fontSize: 16, color: "var(--text-main)", marginBottom: 4, paddingRight: 32 }}>
                     {ev.name}
@@ -104,6 +114,41 @@ export default function EventsPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirm Modal */}
+      {deleteTarget && (
+        <div style={overlay} onClick={() => setDeleteTarget(null)}>
+          <div style={modalCard} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-main)", margin: "0 0 12px" }}>
+              確定刪除活動？
+            </h2>
+            <p style={{ fontSize: 14, color: "var(--text-sub)", lineHeight: 1.6, margin: "0 0 24px" }}>
+              「{deleteTarget.name}」及其所有費用、成員、還款紀錄將一併刪除，無法復原。
+            </p>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setDeleteTarget(null)} style={ghostBtn}>
+                取消
+              </button>
+              <button
+                onClick={confirmDelete}
+                style={{
+                  flex: 1,
+                  padding: "10px 0",
+                  background: "var(--morandi-red)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                確定刪除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Modal */}
       {showModal && (
@@ -143,7 +188,7 @@ export default function EventsPage() {
                 disabled={saving || !name.trim() || !date}
                 style={{ ...accentBtn, flex: 1, opacity: saving || !name.trim() || !date ? 0.5 : 1 }}
               >
-                {saving ? "建立中..." : "建立活動"}
+                {saving ? <><span className="spinner" />建立中...</> : "建立活動"}
               </button>
             </div>
           </div>

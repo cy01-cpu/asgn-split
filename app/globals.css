@@ -10,6 +10,7 @@
   --accent-hover: #7d6e82;
   --morandi-green: #7a9e87;
   --morandi-red: #b87c7c;
+  --morandi-purple: #9b8ea0;
   --separator: #ccc0b3;
 }
 
@@ -32,4 +33,33 @@ body {
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   opacity: 1;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* spinner for white-background buttons */
+.spinner {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+
+/* spinner for card/transparent-background icon buttons */
+.spinner-sm {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(155, 142, 160, 0.25);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+  vertical-align: middle;
 }

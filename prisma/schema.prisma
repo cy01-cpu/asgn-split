@@ -13,17 +13,20 @@ model Event {
   createdAt    DateTime      @default(now())
   participants Participant[]
   expenses     Expense[]
+  repayments   Repayment[]
 }
 
 model Participant {
-  id            Int            @id @default(autoincrement())
-  event         Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  eventId       Int
-  name          String
-  emoji         String         @default("🙂")
-  createdAt     DateTime       @default(now())
-  paidExpenses  Expense[]
-  expenseShares ExpenseShare[]
+  id              Int            @id @default(autoincrement())
+  event           Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId         Int
+  name            String
+  emoji           String         @default("🙂")
+  createdAt       DateTime       @default(now())
+  paidExpenses    Expense[]
+  expenseShares   ExpenseShare[]
+  repaymentsFrom  Repayment[]    @relation("RepaymentFrom")
+  repaymentsTo    Repayment[]    @relation("RepaymentTo")
 }
 
 model Expense {
@@ -46,4 +49,17 @@ model ExpenseShare {
   participantId Int
   shareRatio    Float       @default(1.0)
   amount        Int
+}
+
+model Repayment {
+  id              Int         @id @default(autoincrement())
+  event           Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId         Int
+  fromParticipant Participant @relation("RepaymentFrom", fields: [fromId], references: [id])
+  fromId          Int
+  toParticipant   Participant @relation("RepaymentTo", fields: [toId], references: [id])
+  toId            Int
+  amount          Int
+  note            String?
+  createdAt       DateTime    @default(now())
 }

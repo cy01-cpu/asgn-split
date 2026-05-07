@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem *)",
+      "Bash(npx prisma *)",
+      "Skill(update-config)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(git add *)"
+    ]
+  }
+}
