@@ -127,6 +127,7 @@ export default function EventDetailPage() {
   const [newName, setNewName] = useState("");
   const [selectedEmoji, setSelectedEmoji] = useState("");
   const [addingMember, setAddingMember] = useState(false);
+  const [dupNameError, setDupNameError] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
   const [editEmoji, setEditEmoji] = useState(EMOJI_LIST[0]);
@@ -255,11 +256,18 @@ export default function EventDetailPage() {
 
   async function addMember() {
     if (!newName.trim()) return;
+    const trimmed = newName.trim();
+    const isDup = event?.participants.some((p) => p.name.trim() === trimmed) ?? false;
+    if (isDup) {
+      setDupNameError(`「${trimmed}」已存在，請使用其他名稱`);
+      return;
+    }
+    setDupNameError("");
     setAddingMember(true);
     await fetch(`/api/events/${eventId}/participants`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName.trim(), emoji: selectedEmoji }),
+      body: JSON.stringify({ name: trimmed, emoji: selectedEmoji }),
     });
     setNewName("");
     setSelectedEmoji("");
@@ -632,10 +640,10 @@ export default function EventDetailPage() {
                 <div style={{ display: "flex", gap: 8 }}>
                   <input
                     value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
+                    onChange={(e) => { setNewName(e.target.value); setDupNameError(""); }}
                     onKeyDown={(e) => e.key === "Enter" && addMember()}
                     placeholder="輸入成員名稱"
-                    style={{ ...inputSt, flex: 1 }}
+                    style={{ ...inputSt, flex: 1, borderColor: dupNameError ? "var(--morandi-red)" : undefined }}
                   />
                   <button
                     onClick={addMember}
@@ -645,6 +653,11 @@ export default function EventDetailPage() {
                     {addingMember ? <><span className="spinner" />處理中...</> : "新增"}
                   </button>
                 </div>
+                {dupNameError && (
+                  <p style={{ fontSize: 12, color: "var(--morandi-red)", margin: "6px 0 0" }}>
+                    {dupNameError}
+                  </p>
+                )}
               </div>
 
               {event.participants.length === 0 ? (
@@ -703,7 +716,7 @@ export default function EventDetailPage() {
                     ) : (
                       /* ── Normal card ── */
                       <div key={p.id} style={rowCard}>
-                        <span style={{ fontWeight: 600, fontSize: 15 }}>{p.name}</span>
+                        <span style={{ fontWeight: 600, fontSize: 15 }}>{p.emoji} {p.name}</span>
                         <div style={{ display: "flex", gap: 2 }}>
                           <button
                             onClick={() => startEdit(p)}

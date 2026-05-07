@@ -9,7 +9,7 @@ export async function POST(
   const { id } = await params;
   const { name, emoji } = await req.json();
   const participant = await db.participant.create({
-    data: { eventId: Number(id), name, emoji },
+    data: { eventId: Number(id), name, emoji: emoji || "🙂" },
   });
   emitEventUpdate(Number(id), "participant_added");
   return Response.json(participant, { status: 201 });
