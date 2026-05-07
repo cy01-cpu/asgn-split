@@ -247,18 +247,18 @@ export default function EventsPage() {
               <input value={editName} onChange={(e) => setEditName(e.target.value)} style={input} autoFocus />
             </div>
             <div style={{ marginBottom: 14 }}>
-              <label style={label}>出發日期</label>
+              <label style={label}>起始日</label>
               <input type="date" value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} style={input} />
             </div>
             <div style={{ marginBottom: 24 }}>
-              <label style={label}>結束日期 <span style={{ fontWeight: 400, opacity: 0.7 }}>（選填）</span></label>
+              <label style={label}>迄止日 <span style={{ fontWeight: 400, opacity: 0.7 }}>（選填）</span></label>
               <input
                 type="date" value={editEndDate} min={editStartDate}
                 onChange={(e) => setEditEndDate(e.target.value)}
                 style={{ ...input, borderColor: editEndDate && editEndDate < editStartDate ? "var(--morandi-red)" : undefined }}
               />
               {editEndDate && editEndDate < editStartDate && (
-                <p style={{ fontSize: 12, color: "var(--morandi-red)", margin: "4px 0 0" }}>結束日期不能早於出發日期</p>
+                <p style={{ fontSize: 12, color: "var(--morandi-red)", margin: "4px 0 0" }}>迄止日不能早於起始日</p>
               )}
             </div>
             <div style={{ display: "flex", gap: 8 }}>
@@ -303,18 +303,18 @@ export default function EventsPage() {
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="例：墾丁三天兩夜" style={input} autoFocus />
             </div>
             <div style={{ marginBottom: 14 }}>
-              <label style={label}>出發日期</label>
+              <label style={label}>起始日</label>
               <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={input} />
             </div>
             <div style={{ marginBottom: 24 }}>
-              <label style={label}>結束日期 <span style={{ fontWeight: 400, opacity: 0.7 }}>（選填）</span></label>
+              <label style={label}>迄止日 <span style={{ fontWeight: 400, opacity: 0.7 }}>（選填）</span></label>
               <input
                 type="date" value={endDate} min={startDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 style={{ ...input, borderColor: endDate && endDate < startDate ? "var(--morandi-red)" : undefined }}
               />
               {endDate && endDate < startDate && (
-                <p style={{ fontSize: 12, color: "var(--morandi-red)", margin: "4px 0 0" }}>結束日期不能早於出發日期</p>
+                <p style={{ fontSize: 12, color: "var(--morandi-red)", margin: "4px 0 0" }}>迄止日不能早於起始日</p>
               )}
             </div>
             <div style={{ display: "flex", gap: 8 }}>
