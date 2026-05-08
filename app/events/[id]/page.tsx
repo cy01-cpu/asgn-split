@@ -1125,7 +1125,7 @@ export default function EventDetailPage() {
                           cursor: "pointer",
                         }}
                       >
-                        {event.isSettled ? "🔓 取消結清標記" : "🔒 標記為已結清"}
+                        {event.isSettled ? "🔓 重啟釐算" : "🔒 帳目兩訖"}
                       </button>
                     )}
                   </div>
@@ -1504,7 +1504,7 @@ export default function EventDetailPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: "0 0 12px" }}>
-              {settleAction === "settle" ? "確認標記結清？" : "確認解除結清？"}
+              {settleAction === "settle" ? "確認帳目兩訖？" : "確認重啟釐算？"}
             </h2>
             <p style={{ fontSize: 15, color: "var(--text-sub)", lineHeight: 1.65, margin: "0 0 24px" }}>
               {settleAction === "settle"
@@ -1523,12 +1523,12 @@ export default function EventDetailPage() {
                 disabled={savingSettle}
                 style={{
                   flex: 1, padding: "12px 0", border: "none", borderRadius: 8, fontSize: 16, fontWeight: 600, cursor: "pointer",
-                  background: settleAction === "settle" ? "var(--morandi-green)" : "var(--accent)",
+                  background: settleAction === "settle" ? "var(--morandi-green)" : "var(--morandi-purple)",
                   color: "white",
                   opacity: savingSettle ? 0.6 : 1,
                 }}
               >
-                {savingSettle ? "處理中..." : settleAction === "settle" ? "確認結清" : "確認解除"}
+                {savingSettle ? "處理中..." : settleAction === "settle" ? "帳目兩訖" : "重啟釐算"}
               </button>
             </div>
           </div>
