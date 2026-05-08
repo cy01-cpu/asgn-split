@@ -138,19 +138,19 @@ export default function EventsPage() {
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "24px 16px 80px" }}>
 
         {/* ── Header ── */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
-          <div>
-            <h1 style={{ fontSize: 24, fontWeight: 600, color: "var(--text-main)", margin: 0 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, gap: 12 }}>
+          <div style={{ minWidth: 0 }}>
+            <h1 style={{ fontSize: 24, fontWeight: 600, color: "var(--text-main)", margin: 0, whiteSpace: "nowrap" }}>
               👛 結伴釐算
             </h1>
-            <p style={{ fontSize: 11, color: "var(--text-sub)", margin: "3px 0 0", fontWeight: 400 }}>
+            <p className="hidden-xs" style={{ fontSize: 11, color: "var(--text-sub)", margin: "3px 0 0", fontWeight: 400 }}>
               聚會宴饗，同遊起行；隨心分攤，優雅結清。
             </p>
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0, paddingTop: 2 }}>
             {isAdmin ? (
               <>
-                <span style={{ fontSize: 14, color: "var(--accent)", fontWeight: 600 }}>👑 管理員</span>
+                <span style={{ fontSize: 14, color: "var(--accent)", fontWeight: 600, whiteSpace: "nowrap" }}>👑 管理員</span>
                 <button onClick={logout} style={ghostSmBtn}>登出</button>
                 <button onClick={() => setShowModal(true)} style={accentBtn}>＋ 新增活動</button>
               </>
@@ -159,12 +159,6 @@ export default function EventsPage() {
             )}
           </div>
         </div>
-
-        {!isAdmin && (
-          <p style={{ fontSize: 12, color: "var(--text-sub)", margin: "0 0 20px 2px", opacity: 0.6 }}>
-            如需建立活動，請以管理員身份登入
-          </p>
-        )}
 
         {/* ── Events ── */}
         {events.length === 0 ? (
