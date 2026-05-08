@@ -144,6 +144,7 @@ export default function EventDetailPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [deletingMemberId, setDeletingMemberId] = useState<number | null>(null);
   const [deletingExpId, setDeletingExpId] = useState<number | null>(null);
+  const [expandedExpIds, setExpandedExpIds] = useState<Set<number>>(new Set());
 
   // Expense modal state
   const [showExpModal, setShowExpModal] = useState(false);
@@ -434,6 +435,15 @@ export default function EventDetailPage() {
     fetchEvent();
   }
 
+  function toggleExpand(expId: number) {
+    setExpandedExpIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(expId)) next.delete(expId);
+      else next.add(expId);
+      return next;
+    });
+  }
+
   // ── Repayments ────────────────────────────────────────────────────────────────
 
   function openRepayModal(r?: Repayment) {
@@ -496,17 +506,30 @@ export default function EventDetailPage() {
 
   async function copySettlement() {
     if (!settlement || !event) return;
-    const lines = [`【${event.name}結算】`];
+    const total = event.expenses.reduce((s, e) => s + e.amount, 0);
+    const avg = event.participants.length > 0 ? Math.round(total / event.participants.length) : 0;
+
+    const lines: string[] = [];
+    lines.push(`【${event.name}】結算報告`);
+    lines.push(`📅 ${fmtDateRange(event.startDate, event.endDate)}`);
+    lines.push(`👥 ${event.participants.length}人　💰 總花費 NT$${total.toLocaleString()}　👤 人均 NT$${avg.toLocaleString()}`);
+    lines.push("");
+    lines.push("💸 轉帳清單");
     if (settlement.settlements.length === 0) {
       lines.push("✅ 已結清，無需轉帳！");
     } else {
       settlement.settlements.forEach((s) => {
-        lines.push(
-          `💸 ${s.from.name} 付給 ${s.to.name}：${fmtNT(s.amount)}`
-        );
+        lines.push(`${s.from.name} → ${s.to.name}：NT$${s.amount.toLocaleString()}`);
       });
-      lines.push("✅ 結算完成！");
     }
+    lines.push("");
+    lines.push("📋 費用明細");
+    event.expenses.forEach((exp) => {
+      lines.push(`- ${exp.title}：NT$${exp.amount.toLocaleString()}（${exp.paidBy.name}付）`);
+    });
+    lines.push("");
+    lines.push(`✅ 以上由「結伴釐算」自動計算產生`);
+
     await navigator.clipboard.writeText(lines.join("\n"));
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
@@ -779,40 +802,76 @@ export default function EventDetailPage() {
                 <EmptyState icon="🧾" text="還沒有費用記錄" />
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {event.expenses.map((exp) => (
-                    <div key={exp.id} style={{ ...rowCard, flexDirection: "column", alignItems: "stretch" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>{exp.title}</div>
-                          <div style={{ fontSize: 22, fontWeight: 700, color: "var(--accent)" }}>
-                            {fmtNT(exp.amount)}
+                  {event.expenses.map((exp) => {
+                    const isExpanded = expandedExpIds.has(exp.id);
+                    return (
+                      <div
+                        key={exp.id}
+                        style={{ ...rowCard, flexDirection: "column", alignItems: "stretch", cursor: "pointer" }}
+                        onClick={() => toggleExpand(exp.id)}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                              <span style={{ fontWeight: 600, fontSize: 16 }}>{exp.title}</span>
+                              <span style={{ fontSize: 11, color: "var(--text-sub)", marginLeft: 2, transition: "transform 0.2s", display: "inline-block", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+                            </div>
+                            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--accent)" }}>
+                              {fmtNT(exp.amount)}
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", gap: 2 }}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); openExpEditModal(exp); }}
+                              disabled={deletingExpId === exp.id}
+                              style={{ ...deleteIconBtn, opacity: deletingExpId === exp.id ? 0.35 : 1 }}
+                              title="編輯費用"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); deleteExpense(exp.id); }}
+                              disabled={deletingExpId === exp.id}
+                              style={{ ...deleteIconBtn, opacity: deletingExpId === exp.id ? 0.35 : 1, minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
+                              title="刪除費用"
+                            >
+                              {deletingExpId === exp.id ? <span className="spinner-sm" /> : "🗑️"}
+                            </button>
                           </div>
                         </div>
-                        <div style={{ display: "flex", gap: 2 }}>
-                          <button
-                            onClick={() => openExpEditModal(exp)}
-                            disabled={deletingExpId === exp.id}
-                            style={{ ...deleteIconBtn, opacity: deletingExpId === exp.id ? 0.35 : 1 }}
-                            title="編輯費用"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            onClick={() => deleteExpense(exp.id)}
-                            disabled={deletingExpId === exp.id}
-                            style={{ ...deleteIconBtn, opacity: deletingExpId === exp.id ? 0.35 : 1, minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
-                            title="刪除費用"
-                          >
-                            {deletingExpId === exp.id ? <span className="spinner-sm" /> : "🗑️"}
-                          </button>
+                        <div style={{ display: "flex", gap: 14, fontSize: 13, color: "var(--text-sub)", marginTop: 10 }}>
+                          <span>💳 {exp.paidBy.name} 付款</span>
+                          <span>👥 {exp.shares.length} 人分攤</span>
+                        </div>
+                        {/* 展開明細 */}
+                        <div style={{
+                          overflow: "hidden",
+                          maxHeight: isExpanded ? "400px" : "0",
+                          opacity: isExpanded ? 1 : 0,
+                          transition: "max-height 0.25s ease, opacity 0.2s",
+                        }}>
+                          <div style={{
+                            marginTop: 10,
+                            padding: "10px 12px",
+                            background: "var(--bg-main)",
+                            borderRadius: 8,
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: "6px 16px",
+                          }}>
+                            {exp.shares.map((s) => {
+                              const p = event.participants.find((pt) => pt.id === s.participantId);
+                              return (
+                                <span key={s.participantId} style={{ fontSize: 13, color: "var(--text-sub)" }}>
+                                  {p?.emoji}{p?.name} {fmtNT(s.amount)}
+                                </span>
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
-                      <div style={{ display: "flex", gap: 14, fontSize: 13, color: "var(--text-sub)", marginTop: 10 }}>
-                        <span>💳 {exp.paidBy.name} 付款</span>
-                        <span>👥 {exp.shares.length} 人分攤</span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
