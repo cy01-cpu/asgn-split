@@ -48,7 +48,25 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-  await db.event.delete({ where: { id: Number(id) } });
-  return new Response(null, { status: 204 });
+  try {
+    const { id } = await params;
+    const eventId = Number(id);
+
+    const expenses = await db.expense.findMany({
+      where: { eventId },
+      select: { id: true },
+    });
+    const expenseIds = expenses.map((e) => e.id);
+
+    await db.expenseShare.deleteMany({ where: { expenseId: { in: expenseIds } } });
+    await db.expense.deleteMany({ where: { eventId } });
+    await db.repayment.deleteMany({ where: { eventId } });
+    await db.participant.deleteMany({ where: { eventId } });
+    await db.event.delete({ where: { id: eventId } });
+
+    return new Response(null, { status: 204 });
+  } catch (error) {
+    console.error("Delete event error:", error);
+    return Response.json({ error: String(error) }, { status: 500 });
+  }
 }
