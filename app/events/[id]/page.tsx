@@ -1094,7 +1094,7 @@ export default function EventDetailPage() {
       {showExpModal && (
         <div
           style={{ position: "fixed", inset: 0, background: "rgba(92,82,72,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 50 }}
-          onClick={() => setShowExpModal(false)}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowExpModal(false); }}
         >
           <div
             style={{
@@ -1133,6 +1133,7 @@ export default function EventDetailPage() {
                 value={expAmount}
                 onChange={(e) => setExpAmount(e.target.value)}
                 onBlur={(e) => {
+                  e.stopPropagation();
                   const result = evalAmountExpr(e.target.value);
                   if (result !== null) setExpAmount(String(result));
                 }}
