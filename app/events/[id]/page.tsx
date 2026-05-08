@@ -97,6 +97,20 @@ function buildEqualShares(
   });
 }
 
+function evalAmountExpr(s: string): number | null {
+  const trimmed = s.trim();
+  if (!trimmed) return null;
+  if (!/^[\d\s+\-*/().]+$/.test(trimmed)) return null;
+  try {
+    // eslint-disable-next-line no-new-func
+    const result = new Function(`"use strict"; return (${trimmed})`)();
+    if (typeof result !== "number" || !isFinite(result) || result <= 0) return null;
+    return Math.round(result);
+  } catch {
+    return null;
+  }
+}
+
 function buildCustomShares(
   entries: { id: number; ratio: number }[],
   total: number
@@ -382,7 +396,7 @@ export default function EventDetailPage() {
 
   async function saveExpense() {
     if (!expTitle.trim() || !expAmount || expPaidById === "") return;
-    const total = Number(expAmount);
+    const total = evalAmountExpr(expAmount) ?? Number(expAmount);
     if (!event) return;
 
     let shares;
@@ -421,6 +435,7 @@ export default function EventDetailPage() {
     setShowExpModal(false);
     setEditingExpId(null);
     fetchEvent();
+    if (tab === "settlement") fetchSettlement();
   }
 
   async function deleteExpense(expId: number) {
@@ -543,7 +558,7 @@ export default function EventDetailPage() {
 
   const equalPerPerson =
     equalSelected.size > 0 && expAmount
-      ? Math.floor(Number(expAmount) / equalSelected.size)
+      ? Math.floor((evalAmountExpr(expAmount) ?? Number(expAmount)) / equalSelected.size)
       : 0;
 
   // ── Render ────────────────────────────────────────────────────────────────────
@@ -915,18 +930,47 @@ export default function EventDetailPage() {
                   {/* Transfers */}
                   <SectionLabel text="轉帳清單" />
                   {settlement.settlements.length === 0 ? (
-                    <div style={{
-                      background: "var(--bg-card)",
-                      border: "1px solid var(--border)",
-                      borderRadius: 10,
-                      padding: "20px 16px",
-                      textAlign: "center",
-                      color: "var(--morandi-green)",
-                      fontWeight: 600,
-                      fontSize: 16,
-                      marginBottom: 16,
-                    }}>
-                      ✅ 已結清，無需轉帳！
+                    <div style={{ marginBottom: 16 }}>
+                      <style>{`
+                        @keyframes confettiFall {
+                          0%   { transform: translateY(-20px) rotate(0deg);   opacity: 1; }
+                          100% { transform: translateY(300px) rotate(720deg); opacity: 0; }
+                        }
+                      `}</style>
+                      <div style={{ position: "relative", overflow: "hidden", height: 80, marginBottom: 4 }}>
+                        {[
+                          { color: "#9b8ea0", size: 10, left: "10%", delay: "0s"   },
+                          { color: "#7a9e87", size: 8,  left: "22%", delay: "0.3s" },
+                          { color: "#b87c7c", size: 12, left: "37%", delay: "0.1s" },
+                          { color: "#d4c9bc", size: 7,  left: "52%", delay: "0.5s" },
+                          { color: "#9b8ea0", size: 9,  left: "65%", delay: "0.2s" },
+                          { color: "#7a9e87", size: 11, left: "78%", delay: "0.4s" },
+                          { color: "#b87c7c", size: 8,  left: "90%", delay: "0.6s" },
+                        ].map((c, i) => (
+                          <div key={i} style={{
+                            position: "absolute",
+                            left: c.left,
+                            top: 0,
+                            width: c.size,
+                            height: c.size,
+                            borderRadius: 2,
+                            background: c.color,
+                            animation: `confettiFall 1.8s ${c.delay} ease-in forwards`,
+                          }} />
+                        ))}
+                      </div>
+                      <div style={{
+                        background: "var(--bg-card)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 10,
+                        padding: "16px",
+                        textAlign: "center",
+                        color: "var(--morandi-green)",
+                        fontWeight: 700,
+                        fontSize: 22,
+                      }}>
+                        🎉 結算完成！
+                      </div>
                     </div>
                   ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
@@ -1084,11 +1128,15 @@ export default function EventDetailPage() {
             {/* Amount */}
             <Field label="金額（元）">
               <input
-                type="number"
+                type="text"
+                inputMode="decimal"
                 value={expAmount}
                 onChange={(e) => setExpAmount(e.target.value)}
-                placeholder="0"
-                min={1}
+                onBlur={(e) => {
+                  const result = evalAmountExpr(e.target.value);
+                  if (result !== null) setExpAmount(String(result));
+                }}
+                placeholder="金額（可輸入算式如 120+80）"
                 style={inputSt}
               />
             </Field>
@@ -1197,8 +1245,9 @@ export default function EventDetailPage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {event.participants.map((p) => {
                     const ratio = Number(customRatios[p.id] ?? 0);
+                    const parsedAmt = evalAmountExpr(expAmount) ?? Number(expAmount);
                     const amt = expAmount && customRatioSum > 0
-                      ? Math.floor((ratio / customRatioSum) * Number(expAmount))
+                      ? Math.floor((ratio / customRatioSum) * parsedAmt)
                       : 0;
                     return (
                       <div

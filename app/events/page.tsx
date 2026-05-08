@@ -9,7 +9,7 @@ type EventSummary = {
   startDate: string;
   endDate: string | null;
   participants: { id: number }[];
-  expenses: { id: number }[];
+  expenses: { id: number; amount: number }[];
 };
 
 export default function EventsPage() {
@@ -155,6 +155,27 @@ export default function EventsPage() {
           </div>
         </div>
 
+        {/* Info card */}
+        <div style={{
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
+          borderRadius: 16,
+          padding: "24px 20px 20px",
+          marginBottom: 24,
+          textAlign: "center",
+        }}>
+          <div style={{ fontSize: 48, marginBottom: 8, lineHeight: 1 }}>👛</div>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: "var(--text-main)", margin: "0 0 6px" }}>結伴釐算</h2>
+          <p style={{ fontSize: 14, color: "var(--text-sub)", margin: 0 }}>
+            聚會宴饗，同遊起行；隨心分攤，優雅結清。
+          </p>
+          {!isAdmin && (
+            <p style={{ fontSize: 12, color: "var(--text-sub)", margin: "8px 0 0", opacity: 0.65 }}>
+              如需建立活動，請以管理員身份登入
+            </p>
+          )}
+        </div>
+
         {/* Events */}
         {events.length === 0 ? (
           <div style={{ textAlign: "center", padding: "64px 0", color: "var(--text-sub)" }}>
@@ -194,6 +215,11 @@ export default function EventsPage() {
                     <span>👥 {ev.participants.length} 位參與者</span>
                     <span>💳 {ev.expenses.length} 筆費用</span>
                   </div>
+                  {ev.expenses.length > 0 && (
+                    <div style={{ fontSize: 13, color: "var(--text-sub)", marginTop: 4 }}>
+                      💰 總花費 NT${ev.expenses.reduce((s, e) => s + e.amount, 0).toLocaleString()}
+                    </div>
+                  )}
                 </div>
               </Link>
             ))}
