@@ -27,14 +27,19 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { name, startDate, endDate } = await req.json();
+  const body = await req.json();
+  const data: Record<string, unknown> = {};
+  if (body.name !== undefined) {
+    data.name = body.name.trim();
+    data.startDate = new Date(body.startDate);
+    data.endDate = body.endDate ? new Date(body.endDate) : null;
+  }
+  if (body.isSettled !== undefined) {
+    data.isSettled = body.isSettled;
+  }
   const event = await db.event.update({
     where: { id: Number(id) },
-    data: {
-      name: name.trim(),
-      startDate: new Date(startDate),
-      endDate: endDate ? new Date(endDate) : null,
-    },
+    data,
   });
   return Response.json(event);
 }

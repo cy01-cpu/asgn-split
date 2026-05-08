@@ -11,6 +11,7 @@ model Event {
   name         String
   startDate    DateTime
   endDate      DateTime?
+  isSettled    Boolean       @default(false)
   createdAt    DateTime      @default(now())
   participants Participant[]
   expenses     Expense[]

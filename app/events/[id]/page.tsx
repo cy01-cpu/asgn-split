@@ -29,6 +29,7 @@ type EventDetail = {
   name: string;
   startDate: string;
   endDate: string | null;
+  isSettled: boolean;
   participants: Participant[];
   expenses: Expense[];
 };
@@ -191,6 +192,12 @@ export default function EventDetailPage() {
   // SSE state
   const [sseStatus, setSseStatus] = useState<"connected" | "reconnecting">("reconnecting");
 
+  // Admin + settle state
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showSettleModal, setShowSettleModal] = useState(false);
+  const [settleAction, setSettleAction] = useState<"settle" | "unsettle">("settle");
+  const [savingSettle, setSavingSettle] = useState(false);
+
   // ── Data fetching ────────────────────────────────────────────────────────────
 
   const fetchEvent = useCallback(async () => {
@@ -200,7 +207,10 @@ export default function EventDetailPage() {
     setLoading(false);
   }, [eventId]);
 
-  useEffect(() => { fetchEvent(); }, [fetchEvent]);
+  useEffect(() => {
+    fetchEvent();
+    fetch("/api/admin/check").then(r => r.json()).then(d => setIsAdmin(d.isAdmin));
+  }, [fetchEvent]);
 
   const fetchSettlement = useCallback(async () => {
     setSettlementLoading(true);
@@ -457,6 +467,21 @@ export default function EventDetailPage() {
       else next.add(expId);
       return next;
     });
+  }
+
+  // ── Settle ───────────────────────────────────────────────────────────────────
+
+  async function confirmSettle() {
+    if (!event) return;
+    setSavingSettle(true);
+    await fetch(`/api/events/${eventId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isSettled: settleAction === "settle" }),
+    });
+    setSavingSettle(false);
+    setShowSettleModal(false);
+    fetchEvent();
   }
 
   // ── Repayments ────────────────────────────────────────────────────────────────
@@ -1082,6 +1107,27 @@ export default function EventDetailPage() {
                     >
                       🔄 重新計算
                     </button>
+                    {isAdmin && event && (
+                      <button
+                        onClick={() => {
+                          setSettleAction(event.isSettled ? "unsettle" : "settle");
+                          setShowSettleModal(true);
+                        }}
+                        style={{
+                          width: "100%",
+                          padding: "10px 0",
+                          borderRadius: 10,
+                          border: "none",
+                          background: event.isSettled ? "var(--bg-card)" : "var(--accent)",
+                          color: event.isSettled ? "var(--text-sub)" : "white",
+                          fontSize: 15,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {event.isSettled ? "🔓 取消結清標記" : "🔒 標記為已結清"}
+                      </button>
+                    )}
                   </div>
                 </>
               ) : null}
@@ -1441,6 +1487,48 @@ export default function EventDetailPage() {
                 }}
               >
                 {savingRepay ? <><span className="spinner" />處理中...</> : editingRepayId !== null ? "儲存變更" : "新增紀錄"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ────────────── Settle Modal ────────────── */}
+      {showSettleModal && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(92,82,72,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "0 16px" }}
+          onClick={() => setShowSettleModal(false)}
+        >
+          <div
+            style={{ background: "var(--bg-main)", border: "1px solid var(--border)", borderRadius: 16, padding: "24px 20px", width: "100%", maxWidth: 420 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: "0 0 12px" }}>
+              {settleAction === "settle" ? "確認標記結清？" : "確認解除結清？"}
+            </h2>
+            <p style={{ fontSize: 15, color: "var(--text-sub)", lineHeight: 1.65, margin: "0 0 24px" }}>
+              {settleAction === "settle"
+                ? "標記後活動將移至「已結清」區塊，仍可隨時解除。"
+                : "解除後活動將回到進行中，可繼續編輯費用與成員。"}
+            </p>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => setShowSettleModal(false)}
+                style={{ flex: 1, padding: "12px 0", background: "var(--bg-card)", color: "var(--text-main)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 16, fontWeight: 600, cursor: "pointer" }}
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmSettle}
+                disabled={savingSettle}
+                style={{
+                  flex: 1, padding: "12px 0", border: "none", borderRadius: 8, fontSize: 16, fontWeight: 600, cursor: "pointer",
+                  background: settleAction === "settle" ? "var(--morandi-green)" : "var(--accent)",
+                  color: "white",
+                  opacity: savingSettle ? 0.6 : 1,
+                }}
+              >
+                {savingSettle ? "處理中..." : settleAction === "settle" ? "確認結清" : "確認解除"}
               </button>
             </div>
           </div>

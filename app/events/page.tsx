@@ -10,6 +10,7 @@ type EventSummary = {
   endDate: string | null;
   participants: { id: number }[];
   expenses: { id: number; amount: number }[];
+  isSettled: boolean;
 };
 
 export default function EventsPage() {
@@ -166,48 +167,79 @@ export default function EventsPage() {
             <div style={{ fontSize: 48, marginBottom: 12 }}>🌸</div>
             <p style={{ fontSize: 16 }}>還沒有活動，新增一個吧！</p>
           </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {events.map((ev) => {
-              const total = ev.expenses.reduce((s, e) => s + e.amount, 0);
-              return (
-                <Link key={ev.id} href={`/events/${ev.id}`} style={{ textDecoration: "none" }}>
-                  <div style={cardStyle}>
-                    {isAdmin && (
-                      <div style={{ position: "absolute", top: 10, right: 10, display: "flex", gap: 2 }}>
-                        <button
-                          onClick={(e) => openEdit(ev, e)}
-                          disabled={deletingId === ev.id}
-                          style={{ ...ghostDeleteBtn, position: "static", opacity: deletingId === ev.id ? 0.35 : 1 }}
-                          title="編輯活動"
-                        >✏️</button>
-                        <button
-                          onClick={(e) => deleteEvent(ev.id, ev.name, e)}
-                          disabled={deletingId === ev.id}
-                          style={{ ...ghostDeleteBtn, position: "static", opacity: deletingId === ev.id ? 0.45 : 1, cursor: deletingId === ev.id ? "not-allowed" : "pointer", minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
-                          title="刪除活動"
-                        >
-                          {deletingId === ev.id ? <span className="spinner-sm" /> : "🗑️"}
-                        </button>
-                      </div>
+        ) : (() => {
+          const active = events.filter((ev) => !ev.isSettled);
+          const settled = events.filter((ev) => ev.isSettled);
+
+          function renderCard(ev: EventSummary) {
+            const total = ev.expenses.reduce((s, e) => s + e.amount, 0);
+            return (
+              <Link key={ev.id} href={`/events/${ev.id}`} style={{ textDecoration: "none" }}>
+                <div style={{ ...cardStyle, opacity: ev.isSettled ? 0.7 : 1 }}>
+                  {isAdmin && (
+                    <div style={{ position: "absolute", top: 10, right: 10, display: "flex", gap: 2 }}>
+                      <button
+                        onClick={(e) => openEdit(ev, e)}
+                        disabled={deletingId === ev.id}
+                        style={{ ...ghostDeleteBtn, position: "static", opacity: deletingId === ev.id ? 0.35 : 1 }}
+                        title="編輯活動"
+                      >✏️</button>
+                      <button
+                        onClick={(e) => deleteEvent(ev.id, ev.name, e)}
+                        disabled={deletingId === ev.id}
+                        style={{ ...ghostDeleteBtn, position: "static", opacity: deletingId === ev.id ? 0.45 : 1, cursor: deletingId === ev.id ? "not-allowed" : "pointer", minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
+                        title="刪除活動"
+                      >
+                        {deletingId === ev.id ? <span className="spinner-sm" /> : "🗑️"}
+                      </button>
+                    </div>
+                  )}
+                  <div style={{ fontWeight: 600, fontSize: 18, color: "var(--text-main)", marginBottom: 6, paddingRight: isAdmin ? 68 : 0, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    {ev.name}
+                    {ev.isSettled && (
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--morandi-green)", background: "rgba(122,158,135,0.15)", border: "1px solid rgba(122,158,135,0.4)", borderRadius: 20, padding: "2px 9px", lineHeight: 1.5 }}>
+                        ✅ 已結清
+                      </span>
                     )}
-                    <div style={{ fontWeight: 600, fontSize: 18, color: "var(--text-main)", marginBottom: 6, paddingRight: isAdmin ? 68 : 0 }}>
-                      {ev.name}
-                    </div>
-                    <div style={{ fontSize: 13, color: "var(--text-sub)", marginBottom: 8 }}>
-                      📅 啟程　{fmtDateRange(ev.startDate, ev.endDate)}
-                    </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", fontSize: 13, color: "var(--text-sub)" }}>
-                      <span>👥 同行者　{ev.participants.length} 位</span>
-                      <span>🧾 帳目　{ev.expenses.length} 筆</span>
-                      {total > 0 && <span>💰 共計　NT${total.toLocaleString()}</span>}
-                    </div>
                   </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
+                  <div style={{ fontSize: 13, color: "var(--text-sub)", marginBottom: 8 }}>
+                    📅 啟程　{fmtDateRange(ev.startDate, ev.endDate)}
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", fontSize: 13, color: "var(--text-sub)" }}>
+                    <span>👥 同行者　{ev.participants.length} 位</span>
+                    <span>🧾 帳目　{ev.expenses.length} 筆</span>
+                    {total > 0 && <span>💰 共計　NT${total.toLocaleString()}</span>}
+                  </div>
+                </div>
+              </Link>
+            );
+          }
+
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              {active.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-sub)", marginBottom: 10, letterSpacing: "0.04em" }}>
+                    進行中
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {active.map(renderCard)}
+                  </div>
+                </div>
+              )}
+              {settled.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--morandi-green)", marginBottom: 10, letterSpacing: "0.04em" }}>
+                    已結清
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {settled.map(renderCard)}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* ── Login Modal ── */}
