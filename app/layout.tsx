@@ -15,6 +15,13 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "帳單分攤計算",
   description: "輕鬆計算旅遊、聚餐分帳",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "分攤計算",
+  },
+  themeColor: "#9b8ea0",
 };
 
 export default function RootLayout({
@@ -27,6 +34,14 @@ export default function RootLayout({
       lang="zh-TW"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#9b8ea0" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="分攤計算" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
