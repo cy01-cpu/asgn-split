@@ -1,6 +1,6 @@
 {
-  "name": "帳單分攤計算",
-  "short_name": "分攤計算",
+  "name": "結伴釐算",
+  "short_name": "結伴釐算",
   "description": "聚餐出遊費用分攤工具",
   "start_url": "/events",
   "display": "standalone",

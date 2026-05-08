@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "帳單分攤計算",
+  title: "結伴釐算",
   description: "輕鬆計算旅遊、聚餐分帳",
   manifest: "/manifest.json",
   appleWebApp: {

@@ -140,7 +140,7 @@ export default function EventsPage() {
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: "var(--text-main)", margin: 0 }}>
-            🍽️ 帳單分攤計算
+            👛 結伴釐算
           </h1>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {isAdmin ? (
@@ -247,11 +247,11 @@ export default function EventsPage() {
               <input value={editName} onChange={(e) => setEditName(e.target.value)} style={input} autoFocus />
             </div>
             <div style={{ marginBottom: 14 }}>
-              <label style={label}>起始日</label>
+              <label style={label}>啟程日</label>
               <input type="date" value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} style={input} />
             </div>
             <div style={{ marginBottom: 24 }}>
-              <label style={label}>迄止日 <span style={{ fontWeight: 400, opacity: 0.7 }}>（選填）</span></label>
+              <label style={label}>賦歸日 <span style={{ fontWeight: 400, opacity: 0.7 }}>（選填）</span></label>
               <input
                 type="date" value={editEndDate} min={editStartDate}
                 onChange={(e) => setEditEndDate(e.target.value)}
@@ -303,11 +303,11 @@ export default function EventsPage() {
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="例：墾丁三天兩夜" style={input} autoFocus />
             </div>
             <div style={{ marginBottom: 14 }}>
-              <label style={label}>起始日</label>
+              <label style={label}>啟程日</label>
               <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={input} />
             </div>
             <div style={{ marginBottom: 24 }}>
-              <label style={label}>迄止日 <span style={{ fontWeight: 400, opacity: 0.7 }}>（選填）</span></label>
+              <label style={label}>賦歸日 <span style={{ fontWeight: 400, opacity: 0.7 }}>（選填）</span></label>
               <input
                 type="date" value={endDate} min={startDate}
                 onChange={(e) => setEndDate(e.target.value)}
