@@ -674,6 +674,21 @@ export default function EventDetailPage() {
           ))}
         </div>
 
+        {/* ── Readonly Banner ── */}
+        {event.isSettled && !isAdmin && (
+          <div style={{
+            background: "#e8f0eb",
+            color: "#4a7c59",
+            fontSize: 14,
+            fontWeight: 600,
+            padding: "10px 16px",
+            textAlign: "center",
+            borderBottom: "1px solid #c4dace",
+          }}>
+            🔒 此活動已圓滿平帳，僅供檢視
+          </div>
+        )}
+
         {/* ── Tab Content ── */}
         <div style={{ padding: 16 }}>
 
@@ -681,7 +696,7 @@ export default function EventDetailPage() {
           {tab === "members" && (
             <div>
               {/* Add member panel */}
-              <div style={{
+              {!(event.isSettled && !isAdmin) && <div style={{
                 background: "var(--bg-card)",
                 border: "1px solid var(--border)",
                 borderRadius: 12,
@@ -731,7 +746,7 @@ export default function EventDetailPage() {
                     {dupNameError}
                   </p>
                 )}
-              </div>
+              </div>}
 
               {event.participants.length === 0 ? (
                 <EmptyState icon="👤" text="還沒有成員，先新增幾位吧！" />
@@ -790,24 +805,26 @@ export default function EventDetailPage() {
                       /* ── Normal card ── */
                       <div key={p.id} style={rowCard}>
                         <span style={{ fontWeight: 600, fontSize: 16 }}>{p.emoji} {p.name}</span>
-                        <div style={{ display: "flex", gap: 2 }}>
-                          <button
-                            onClick={() => startEdit(p)}
-                            disabled={deletingMemberId === p.id}
-                            style={{ ...deleteIconBtn, fontSize: 15, opacity: deletingMemberId === p.id ? 0.35 : 1 }}
-                            title="編輯成員"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            onClick={() => deleteMember(p.id)}
-                            disabled={deletingMemberId === p.id}
-                            style={{ ...deleteIconBtn, fontSize: 15, opacity: deletingMemberId === p.id ? 0.35 : 1, minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
-                            title="刪除成員"
-                          >
-                            {deletingMemberId === p.id ? <span className="spinner-sm" /> : "🗑️"}
-                          </button>
-                        </div>
+                        {!(event.isSettled && !isAdmin) && (
+                          <div style={{ display: "flex", gap: 2 }}>
+                            <button
+                              onClick={() => startEdit(p)}
+                              disabled={deletingMemberId === p.id}
+                              style={{ ...deleteIconBtn, fontSize: 15, opacity: deletingMemberId === p.id ? 0.35 : 1 }}
+                              title="編輯成員"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => deleteMember(p.id)}
+                              disabled={deletingMemberId === p.id}
+                              style={{ ...deleteIconBtn, fontSize: 15, opacity: deletingMemberId === p.id ? 0.35 : 1, minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
+                              title="刪除成員"
+                            >
+                              {deletingMemberId === p.id ? <span className="spinner-sm" /> : "🗑️"}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )
                   )}
@@ -819,23 +836,27 @@ export default function EventDetailPage() {
           {/* ────────────── Expenses Tab ────────────── */}
           {tab === "expenses" && (
             <div>
-              <button
-                onClick={openExpModal}
-                disabled={event.participants.length === 0}
-                style={{
-                  ...accentBtnSt,
-                  width: "100%",
-                  marginBottom: 16,
-                  padding: "14px 0",
-                  opacity: event.participants.length === 0 ? 0.5 : 1,
-                }}
-              >
-                ＋ 新增費用
-              </button>
-              {event.participants.length === 0 && (
-                <p style={{ textAlign: "center", fontSize: 14, color: "var(--text-sub)", marginBottom: 12 }}>
-                  請先至「成員」頁籤新增參與者
-                </p>
+              {!(event.isSettled && !isAdmin) && (
+                <>
+                  <button
+                    onClick={openExpModal}
+                    disabled={event.participants.length === 0}
+                    style={{
+                      ...accentBtnSt,
+                      width: "100%",
+                      marginBottom: 16,
+                      padding: "14px 0",
+                      opacity: event.participants.length === 0 ? 0.5 : 1,
+                    }}
+                  >
+                    ＋ 新增費用
+                  </button>
+                  {event.participants.length === 0 && (
+                    <p style={{ textAlign: "center", fontSize: 14, color: "var(--text-sub)", marginBottom: 12 }}>
+                      請先至「成員」頁籤新增參與者
+                    </p>
+                  )}
+                </>
               )}
 
               {event.expenses.length === 0 ? (
@@ -860,24 +881,26 @@ export default function EventDetailPage() {
                               {fmtNT(exp.amount)}
                             </div>
                           </div>
-                          <div style={{ display: "flex", gap: 2 }}>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); openExpEditModal(exp); }}
-                              disabled={deletingExpId === exp.id}
-                              style={{ ...deleteIconBtn, opacity: deletingExpId === exp.id ? 0.35 : 1 }}
-                              title="編輯費用"
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); deleteExpense(exp.id); }}
-                              disabled={deletingExpId === exp.id}
-                              style={{ ...deleteIconBtn, opacity: deletingExpId === exp.id ? 0.35 : 1, minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
-                              title="刪除費用"
-                            >
-                              {deletingExpId === exp.id ? <span className="spinner-sm" /> : "🗑️"}
-                            </button>
-                          </div>
+                          {!(event.isSettled && !isAdmin) && (
+                            <div style={{ display: "flex", gap: 2 }}>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); openExpEditModal(exp); }}
+                                disabled={deletingExpId === exp.id}
+                                style={{ ...deleteIconBtn, opacity: deletingExpId === exp.id ? 0.35 : 1 }}
+                                title="編輯費用"
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); deleteExpense(exp.id); }}
+                                disabled={deletingExpId === exp.id}
+                                style={{ ...deleteIconBtn, opacity: deletingExpId === exp.id ? 0.35 : 1, minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
+                                title="刪除費用"
+                              >
+                                {deletingExpId === exp.id ? <span className="spinner-sm" /> : "🗑️"}
+                              </button>
+                            </div>
+                          )}
                         </div>
                         <div style={{ display: "flex", gap: 14, fontSize: 13, color: "var(--text-sub)", marginTop: 10 }}>
                           <span>💳 {exp.paidBy.name} 付款</span>
@@ -1030,24 +1053,26 @@ export default function EventDetailPage() {
                             {r.note && <span style={{ fontSize: 13, color: "var(--text-sub)" }}>{r.note}</span>}
                           </div>
                         </div>
-                        <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
-                          <button
-                            onClick={() => openRepayModal(r)}
-                            disabled={deletingRepayId === r.id}
-                            style={{ ...deleteIconBtn, opacity: deletingRepayId === r.id ? 0.35 : 1 }}
-                            title="編輯還款紀錄"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            onClick={() => deleteRepayment(r.id)}
-                            disabled={deletingRepayId === r.id}
-                            style={{ ...deleteIconBtn, minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center", opacity: deletingRepayId === r.id ? 0.35 : 1 }}
-                            title="刪除還款紀錄"
-                          >
-                            {deletingRepayId === r.id ? <span className="spinner-sm" /> : "🗑️"}
-                          </button>
-                        </div>
+                        {!(event.isSettled && !isAdmin) && (
+                          <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+                            <button
+                              onClick={() => openRepayModal(r)}
+                              disabled={deletingRepayId === r.id}
+                              style={{ ...deleteIconBtn, opacity: deletingRepayId === r.id ? 0.35 : 1 }}
+                              title="編輯還款紀錄"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => deleteRepayment(r.id)}
+                              disabled={deletingRepayId === r.id}
+                              style={{ ...deleteIconBtn, minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center", opacity: deletingRepayId === r.id ? 0.35 : 1 }}
+                              title="刪除還款紀錄"
+                            >
+                              {deletingRepayId === r.id ? <span className="spinner-sm" /> : "🗑️"}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                     {repayments.length === 0 && (
@@ -1055,7 +1080,7 @@ export default function EventDetailPage() {
                         尚無還款紀錄
                       </div>
                     )}
-                    <button
+                    {!(event.isSettled && !isAdmin) && <button
                       onClick={() => openRepayModal()}
                       disabled={!event || event.participants.length < 2}
                       style={{
@@ -1070,7 +1095,7 @@ export default function EventDetailPage() {
                       }}
                     >
                       ＋ 新增還款紀錄
-                    </button>
+                    </button>}
                   </div>
 
                   {/* Copy + Refresh */}
