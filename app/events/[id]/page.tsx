@@ -572,7 +572,7 @@ export default function EventDetailPage() {
 
     await navigator.clipboard.writeText(lines.join("\n"));
     setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   // ── Computed ──────────────────────────────────────────────────────────────────
@@ -1102,6 +1102,7 @@ export default function EventDetailPage() {
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     <button
                       onClick={copySettlement}
+                      disabled={copied}
                       style={{
                         width: "100%",
                         padding: "12px 0",
@@ -1111,8 +1112,9 @@ export default function EventDetailPage() {
                         color: "white",
                         fontSize: 16,
                         fontWeight: 600,
-                        cursor: "pointer",
+                        cursor: copied ? "not-allowed" : "pointer",
                         transition: "background 0.2s",
+                        opacity: copied ? 0.85 : 1,
                       }}
                     >
                       {copied ? "✅ 已複製！" : "📋 複製結算結果"}
@@ -1301,15 +1303,38 @@ export default function EventDetailPage() {
             {splitMode === "custom" && (
               <Field
                 label={
-                  <span style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span>自訂比例</span>
-                    <span style={{
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: customRatioSum === 100 ? "var(--morandi-green)" : "var(--morandi-red)",
-                    }}>
-                      合計 {customRatioSum}%
-                      {customRatioSum !== 100 && " ≠ 100%"}
+                  <span style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <span style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span>自訂比例</span>
+                      <span style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: customRatioSum === 100 ? "var(--morandi-green)" : "var(--morandi-red)",
+                      }}>
+                        合計 {customRatioSum}%
+                        {customRatioSum !== 100 && " ≠ 100%"}
+                      </span>
+                    </span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ flex: 1, height: 6, background: "#e8e0d5", borderRadius: 3, overflow: "hidden", display: "block" }}>
+                        <span style={{
+                          display: "block",
+                          height: "100%",
+                          width: `${Math.min(customRatioSum, 100)}%`,
+                          background: customRatioSum < 100 ? "#9b8ea0" : customRatioSum === 100 ? "#7a9e87" : "#b87c7c",
+                          borderRadius: 3,
+                          transition: "width 0.2s, background 0.2s",
+                        }} />
+                      </span>
+                      <span style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: customRatioSum < 100 ? "#9b8ea0" : customRatioSum === 100 ? "#7a9e87" : "#b87c7c",
+                        minWidth: 34,
+                        textAlign: "right",
+                      }}>
+                        {customRatioSum}%
+                      </span>
                     </span>
                   </span>
                 }
