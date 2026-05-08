@@ -246,7 +246,7 @@ export default function EventsPage() {
 
       {/* ── Login Modal ── */}
       {showLoginModal && (
-        <div style={overlay} onClick={() => { setShowLoginModal(false); setLoginError(""); setLoginPassword(""); }}>
+        <div style={overlay} onClick={(e) => { if (e.target === e.currentTarget) { setShowLoginModal(false); setLoginError(""); setLoginPassword(""); } }}>
           <div style={modalCard} onClick={(e) => e.stopPropagation()}>
             <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>
               🔑 管理員登入
@@ -282,7 +282,7 @@ export default function EventsPage() {
 
       {/* ── Edit Modal ── */}
       {editTarget && (
-        <div style={overlay} onClick={() => setEditTarget(null)}>
+        <div style={overlay} onClick={(e) => { if (e.target === e.currentTarget) setEditTarget(null); }}>
           <div style={modalCard} onClick={(e) => e.stopPropagation()}>
             <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>編輯活動</h2>
             <div style={{ marginBottom: 14 }}>
@@ -320,7 +320,7 @@ export default function EventsPage() {
 
       {/* ── Delete Confirm Modal ── */}
       {deleteTarget && (
-        <div style={overlay} onClick={() => setDeleteTarget(null)}>
+        <div style={overlay} onClick={(e) => { if (e.target === e.currentTarget) setDeleteTarget(null); }}>
           <div style={modalCard} onClick={(e) => e.stopPropagation()}>
             <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: "0 0 12px" }}>確定刪除活動？</h2>
             <p style={{ fontSize: 15, color: "var(--text-sub)", lineHeight: 1.6, margin: "0 0 24px" }}>
@@ -338,7 +338,7 @@ export default function EventsPage() {
 
       {/* ── Create Modal ── */}
       {showModal && (
-        <div style={overlay} onClick={() => setShowModal(false)}>
+        <div style={overlay} onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}>
           <div style={modalCard} onClick={(e) => e.stopPropagation()}>
             <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>新增活動</h2>
             <div style={{ marginBottom: 14 }}>

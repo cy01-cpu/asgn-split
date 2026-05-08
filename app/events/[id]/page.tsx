@@ -1402,7 +1402,7 @@ export default function EventDetailPage() {
       {showRepayModal && (
         <div
           style={{ position: "fixed", inset: 0, background: "rgba(92,82,72,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 50 }}
-          onClick={() => setShowRepayModal(false)}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowRepayModal(false); }}
         >
           <div
             style={{
@@ -1451,6 +1451,8 @@ export default function EventDetailPage() {
                 type="number"
                 value={repayAmount}
                 onChange={(e) => setRepayAmount(e.target.value)}
+                onBlur={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
                 placeholder="0"
                 min={1}
                 style={inputSt}
@@ -1522,7 +1524,7 @@ export default function EventDetailPage() {
       {showSettleModal && (
         <div
           style={{ position: "fixed", inset: 0, background: "rgba(92,82,72,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "0 16px" }}
-          onClick={() => setShowSettleModal(false)}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowSettleModal(false); }}
         >
           <div
             style={{ background: "var(--bg-main)", border: "1px solid var(--border)", borderRadius: 16, padding: "24px 20px", width: "100%", maxWidth: 420 }}
