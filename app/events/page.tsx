@@ -139,9 +139,14 @@ export default function EventsPage() {
 
         {/* ── Header ── */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
-          <h1 style={{ fontSize: 24, fontWeight: 600, color: "var(--text-main)", margin: 0 }}>
-            👛 結伴釐算
-          </h1>
+          <div>
+            <h1 style={{ fontSize: 24, fontWeight: 600, color: "var(--text-main)", margin: 0 }}>
+              👛 結伴釐算
+            </h1>
+            <p style={{ fontSize: 11, color: "var(--text-sub)", margin: "3px 0 0", fontWeight: 400 }}>
+              聚會宴饗，同遊起行；隨心分攤，優雅結清。
+            </p>
+          </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {isAdmin ? (
               <>
@@ -155,23 +160,8 @@ export default function EventsPage() {
           </div>
         </div>
 
-        {/* ── Info card ── */}
-        <div style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border)",
-          borderRadius: 16,
-          padding: "24px 20px 20px",
-          marginBottom: !isAdmin ? 8 : 24,
-          textAlign: "center",
-        }}>
-          <div style={{ fontSize: 40, marginBottom: 10, lineHeight: 1 }}>👛</div>
-          <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--text-main)", margin: "0 0 6px" }}>結伴釐算</h2>
-          <p style={{ fontSize: 14, color: "var(--text-sub)", margin: 0, lineHeight: 1.7 }}>
-            聚會宴饗，同遊起行；隨心分攤，優雅結清。
-          </p>
-        </div>
         {!isAdmin && (
-          <p style={{ fontSize: 12, color: "var(--text-sub)", margin: "0 0 24px 2px", opacity: 0.6 }}>
+          <p style={{ fontSize: 12, color: "var(--text-sub)", margin: "0 0 20px 2px", opacity: 0.6 }}>
             如需建立活動，請以管理員身份登入
           </p>
         )}
