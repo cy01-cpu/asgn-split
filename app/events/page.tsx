@@ -148,12 +148,14 @@ export default function EventsPage() {
               聚會宴饗，同遊起行；隨心分攤，優雅結清。
             </p>
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0, paddingTop: 2 }}>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0, paddingTop: 2 }}>
             {isAdmin ? (
               <>
-                <span style={{ fontSize: 14, color: "var(--accent)", fontWeight: 600, whiteSpace: "nowrap" }}>👑 管理員</span>
+                <span style={{ fontSize: 14, color: "var(--accent)", fontWeight: 600, whiteSpace: "nowrap" }}>
+                  👑<span className="hidden-xs"> 管理員</span>
+                </span>
                 <button onClick={logout} style={ghostSmBtn}>登出</button>
-                <button onClick={() => setShowModal(true)} style={accentBtn}>＋ 新增活動</button>
+                <button onClick={() => setShowModal(true)} style={accentBtn}>＋ 新增</button>
               </>
             ) : (
               <button onClick={() => setShowLoginModal(true)} style={ghostSmBtn}>🔑 管理員登入</button>
