@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { ThemeSwitcher } from "../../components/ThemeSwitcher";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -637,6 +638,7 @@ export default function EventDetailPage() {
               );
             })()}
           </div>
+          <ThemeSwitcher />
           <div
             title={sseStatus === "connected" ? "即時同步中" : "重新連線中"}
             style={{

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ThemeSwitcher } from "../components/ThemeSwitcher";
 
 type EventSummary = {
   id: number;
@@ -149,6 +150,7 @@ export default function EventsPage() {
             </p>
           </div>
           <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0, paddingTop: 2 }}>
+            <ThemeSwitcher />
             {isAdmin ? (
               <>
                 <span style={{ fontSize: 14, color: "var(--accent)", fontWeight: 600, whiteSpace: "nowrap" }}>
