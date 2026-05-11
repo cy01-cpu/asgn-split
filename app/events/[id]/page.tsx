@@ -1194,6 +1194,8 @@ export default function EventDetailPage() {
               <input
                 value={expTitle}
                 onChange={(e) => setExpTitle(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
                 placeholder="例：晚餐、計程車"
                 style={inputSt}
                 autoFocus
@@ -1212,6 +1214,8 @@ export default function EventDetailPage() {
                   const result = evalAmountExpr(e.target.value);
                   if (result !== null) setExpAmount(String(result));
                 }}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
                 placeholder="金額（可輸入算式如 120+80）"
                 style={inputSt}
               />
@@ -1222,6 +1226,8 @@ export default function EventDetailPage() {
               <select
                 value={expPaidById}
                 onChange={(e) => setExpPaidById(Number(e.target.value))}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
                 style={inputSt}
               >
                 {event.participants.map((p) => (
@@ -1236,7 +1242,8 @@ export default function EventDetailPage() {
                 {(["equal", "custom"] as SplitMode[]).map((mode) => (
                   <button
                     key={mode}
-                    onClick={() => setSplitMode(mode)}
+                    onClick={(e) => { e.stopPropagation(); setSplitMode(mode); }}
+                    onMouseDown={(e) => e.stopPropagation()}
                     style={{
                       flex: 1,
                       padding: "11px 0",
@@ -1286,6 +1293,8 @@ export default function EventDetailPage() {
                             else next.delete(p.id);
                             setEqualSelected(next);
                           }}
+                          onClick={(e) => e.stopPropagation()}
+                          onMouseDown={(e) => e.stopPropagation()}
                           style={{ accentColor: "var(--accent)", width: 16, height: 16 }}
                         />
                         <span style={{ flex: 1, fontSize: 15 }}>{p.name}</span>
@@ -1368,6 +1377,9 @@ export default function EventDetailPage() {
                           onChange={(e) =>
                             setCustomRatios((prev) => ({ ...prev, [p.id]: e.target.value }))
                           }
+                          onClick={(e) => e.stopPropagation()}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onPointerDown={(e) => e.stopPropagation()}
                           min={0}
                           max={100}
                           style={{
@@ -1453,6 +1465,8 @@ export default function EventDetailPage() {
               <select
                 value={repayFromId}
                 onChange={(e) => setRepayFromId(Number(e.target.value))}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
                 style={inputSt}
               >
                 {event.participants.map((p) => (
@@ -1465,6 +1479,8 @@ export default function EventDetailPage() {
               <select
                 value={repayToId}
                 onChange={(e) => setRepayToId(Number(e.target.value))}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
                 style={inputSt}
               >
                 {event.participants.map((p) => (
@@ -1480,6 +1496,8 @@ export default function EventDetailPage() {
                 onChange={(e) => setRepayAmount(e.target.value)}
                 onBlur={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
                 placeholder="0"
                 min={1}
                 style={inputSt}
@@ -1492,11 +1510,13 @@ export default function EventDetailPage() {
                 {(["💚 Line Pay", "🏦 銀行轉帳", "💵 現金"] as const).map((method) => (
                   <button
                     key={method}
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       const next = repayPayMethod === method ? "" : method;
                       setRepayPayMethod(next);
                       setRepayNote(next);
                     }}
+                    onMouseDown={(e) => e.stopPropagation()}
                     style={{
                       flex: 1,
                       padding: "10px 4px",
@@ -1524,6 +1544,8 @@ export default function EventDetailPage() {
                   const knownMethods = ["💚 Line Pay", "🏦 銀行轉帳", "💵 現金"];
                   if (!knownMethods.includes(e.target.value)) setRepayPayMethod("");
                 }}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
                 placeholder="例：Line Pay 轉帳"
                 style={inputSt}
               />

@@ -260,6 +260,8 @@ export default function EventsPage() {
                 value={loginPassword}
                 onChange={(e) => { setLoginPassword(e.target.value); setLoginError(""); }}
                 onKeyDown={(e) => e.key === "Enter" && login()}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
                 placeholder="輸入管理員密碼"
                 style={{ ...input, borderColor: loginError ? "var(--morandi-red)" : undefined }}
                 autoFocus
@@ -289,17 +291,19 @@ export default function EventsPage() {
             <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>編輯活動</h2>
             <div style={{ marginBottom: 14 }}>
               <label style={label}>活動名稱</label>
-              <input value={editName} onChange={(e) => setEditName(e.target.value)} style={input} autoFocus />
+              <input value={editName} onChange={(e) => setEditName(e.target.value)} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} style={input} autoFocus />
             </div>
             <div style={{ marginBottom: 14 }}>
               <label style={label}>啟程日</label>
-              <input type="date" value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} style={input} />
+              <input type="date" value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} style={input} />
             </div>
             <div style={{ marginBottom: 24 }}>
               <label style={label}>賦歸日 <span style={{ fontWeight: 400, opacity: 0.7 }}>（選填）</span></label>
               <input
                 type="date" value={editEndDate} min={editStartDate}
                 onChange={(e) => setEditEndDate(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
                 style={{ ...input, borderColor: editEndDate && editEndDate < editStartDate ? "var(--morandi-red)" : undefined }}
               />
               {editEndDate && editEndDate < editStartDate && (
@@ -345,17 +349,19 @@ export default function EventsPage() {
             <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>新增活動</h2>
             <div style={{ marginBottom: 14 }}>
               <label style={label}>活動名稱</label>
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="例：墾丁三天兩夜" style={input} autoFocus />
+              <input value={name} onChange={(e) => setName(e.target.value)} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} placeholder="例：墾丁三天兩夜" style={input} autoFocus />
             </div>
             <div style={{ marginBottom: 14 }}>
               <label style={label}>啟程日</label>
-              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={input} />
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} style={input} />
             </div>
             <div style={{ marginBottom: 24 }}>
               <label style={label}>賦歸日 <span style={{ fontWeight: 400, opacity: 0.7 }}>（選填）</span></label>
               <input
                 type="date" value={endDate} min={startDate}
                 onChange={(e) => setEndDate(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
                 style={{ ...input, borderColor: endDate && endDate < startDate ? "var(--morandi-red)" : undefined }}
               />
               {endDate && endDate < startDate && (
