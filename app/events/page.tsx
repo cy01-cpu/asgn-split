@@ -3,6 +3,16 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ThemeSwitcher } from "../components/ThemeSwitcher";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type EventSummary = {
   id: number;
@@ -17,6 +27,7 @@ type EventSummary = {
 export default function EventsPage() {
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Create modal
   const [showModal, setShowModal] = useState(false);
@@ -135,6 +146,10 @@ export default function EventsPage() {
     return `${start} ~ ${em}/${ed}（${days}天）`;
   }
 
+  const filteredEvents = events.filter((ev) =>
+    ev.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-main)", color: "var(--text-main)" }}>
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "24px 16px 80px" }}>
@@ -156,65 +171,84 @@ export default function EventsPage() {
                 <span style={{ fontSize: 14, color: "var(--accent)", fontWeight: 600, whiteSpace: "nowrap" }}>
                   👑<span className="hidden-xs"> 管理員</span>
                 </span>
-                <button onClick={logout} style={ghostSmBtn}>登出</button>
-                <button onClick={() => setShowModal(true)} style={accentBtn}>＋ 新增</button>
+                <Button onClick={logout} style={ghostSmBtn}>登出</Button>
+                <Button onClick={() => setShowModal(true)} style={accentBtn}>＋ 新增</Button>
               </>
             ) : (
-              <button onClick={() => setShowLoginModal(true)} style={ghostSmBtn}>🔑 管理員登入</button>
+              <Button onClick={() => setShowLoginModal(true)} style={ghostSmBtn}>🔑 管理員登入</Button>
             )}
           </div>
         </div>
 
+        {/* ── Search ── */}
+        <div style={{ marginBottom: 16, position: "relative" }}>
+          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", fontSize: 16, zIndex: 1 }}>🔍</span>
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="搜尋活動名稱..."
+            style={{ ...inputSt, paddingLeft: 40 }}
+          />
+        </div>
+
         {/* ── Events ── */}
-        {events.length === 0 ? (
+        {filteredEvents.length === 0 ? (
           <div style={{ textAlign: "center", padding: "64px 0", color: "var(--text-sub)" }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🌸</div>
-            <p style={{ fontSize: 16 }}>還沒有活動，新增一個吧！</p>
+            {searchQuery ? (
+              <p style={{ fontSize: 16 }}>找不到符合的活動</p>
+            ) : (
+              <>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>🌸</div>
+                <p style={{ fontSize: 16 }}>還沒有活動，新增一個吧！</p>
+              </>
+            )}
           </div>
         ) : (() => {
-          const active = events.filter((ev) => !ev.isSettled);
-          const settled = events.filter((ev) => ev.isSettled);
+          const active = filteredEvents.filter((ev) => !ev.isSettled);
+          const settled = filteredEvents.filter((ev) => ev.isSettled);
 
           function renderCard(ev: EventSummary) {
             const total = ev.expenses.reduce((s, e) => s + e.amount, 0);
             return (
               <Link key={ev.id} href={`/events/${ev.id}`} style={{ textDecoration: "none" }}>
-                <div style={{ ...cardStyle, opacity: ev.isSettled ? 0.7 : 1 }}>
-                  {isAdmin && (
-                    <div style={{ position: "absolute", top: 10, right: 10, display: "flex", gap: 2 }}>
-                      <button
-                        onClick={(e) => openEdit(ev, e)}
-                        disabled={deletingId === ev.id}
-                        style={{ ...ghostDeleteBtn, position: "static", opacity: deletingId === ev.id ? 0.35 : 1 }}
-                        title="編輯活動"
-                      >✏️</button>
-                      <button
-                        onClick={(e) => deleteEvent(ev.id, ev.name, e)}
-                        disabled={deletingId === ev.id}
-                        style={{ ...ghostDeleteBtn, position: "static", opacity: deletingId === ev.id ? 0.45 : 1, cursor: deletingId === ev.id ? "not-allowed" : "pointer", minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
-                        title="刪除活動"
-                      >
-                        {deletingId === ev.id ? <span className="spinner-sm" /> : "🗑️"}
-                      </button>
-                    </div>
-                  )}
-                  <div style={{ fontWeight: 600, fontSize: 18, color: "var(--text-main)", marginBottom: 6, paddingRight: isAdmin ? 68 : 0, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    {ev.name}
-                    {ev.isSettled && (
-                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--morandi-green)", background: "rgba(122,158,135,0.15)", border: "1px solid rgba(122,158,135,0.4)", borderRadius: 20, padding: "2px 9px", lineHeight: 1.5 }}>
-                        ✅ 已結清
-                      </span>
+                <Card style={{ ...cardStyle, opacity: ev.isSettled ? 0.7 : 1 }}>
+                  <CardContent className="p-0" style={{ padding: "16px 20px" }}>
+                    {isAdmin && (
+                      <div style={{ position: "absolute", top: 10, right: 10, display: "flex", gap: 2 }}>
+                        <Button
+                          onClick={(e) => openEdit(ev, e)}
+                          disabled={deletingId === ev.id}
+                          style={{ ...ghostDeleteBtn, opacity: deletingId === ev.id ? 0.35 : 1 }}
+                          title="編輯活動"
+                        >✏️</Button>
+                        <Button
+                          onClick={(e) => deleteEvent(ev.id, ev.name, e)}
+                          disabled={deletingId === ev.id}
+                          style={{ ...ghostDeleteBtn, opacity: deletingId === ev.id ? 0.45 : 1, cursor: deletingId === ev.id ? "not-allowed" : "pointer", minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
+                          title="刪除活動"
+                        >
+                          {deletingId === ev.id ? <span className="spinner-sm" /> : "🗑️"}
+                        </Button>
+                      </div>
                     )}
-                  </div>
-                  <div style={{ fontSize: 13, color: "var(--text-sub)", marginBottom: 8 }}>
-                    📅 啟程　{fmtDateRange(ev.startDate, ev.endDate)}
-                  </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", fontSize: 13, color: "var(--text-sub)" }}>
-                    <span>👥 同行者　{ev.participants.length} 位</span>
-                    <span>🧾 帳目　{ev.expenses.length} 筆</span>
-                    {total > 0 && <span>💰 共計　NT${total.toLocaleString()}</span>}
-                  </div>
-                </div>
+                    <div style={{ fontWeight: 600, fontSize: 18, color: "var(--text-main)", marginBottom: 6, paddingRight: isAdmin ? 68 : 0, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      {ev.name}
+                      {ev.isSettled && (
+                        <Badge style={{ fontSize: 12, fontWeight: 600, color: "var(--morandi-green)", background: "rgba(122,158,135,0.15)", border: "1px solid rgba(122,158,135,0.4)", borderRadius: 20, padding: "2px 9px" }}>
+                          ✅ 已結清
+                        </Badge>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 13, color: "var(--text-sub)", marginBottom: 8 }}>
+                      📅 啟程　{fmtDateRange(ev.startDate, ev.endDate)}
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", fontSize: 13, color: "var(--text-sub)" }}>
+                      <span>👥 同行者　{ev.participants.length} 位</span>
+                      <span>🧾 帳目　{ev.expenses.length} 筆</span>
+                      {total > 0 && <span>💰 共計　NT${total.toLocaleString()}</span>}
+                    </div>
+                  </CardContent>
+                </Card>
               </Link>
             );
           }
@@ -247,140 +281,153 @@ export default function EventsPage() {
       </div>
 
       {/* ── Login Modal ── */}
-      {showLoginModal && (
-        <div style={overlay}>
-          <div style={modalCard} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>
-              🔑 管理員登入
-            </h2>
-            <div style={{ marginBottom: 20 }}>
-              <label style={label}>密碼</label>
-              <input
-                type="password"
-                value={loginPassword}
-                onChange={(e) => { setLoginPassword(e.target.value); setLoginError(""); }}
-                onKeyDown={(e) => e.key === "Enter" && login()}
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                placeholder="輸入管理員密碼"
-                style={{ ...input, borderColor: loginError ? "var(--morandi-red)" : undefined }}
-                autoFocus
-              />
-              {loginError && (
-                <p style={{ fontSize: 12, color: "var(--morandi-red)", margin: "6px 0 0" }}>{loginError}</p>
-              )}
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => { setShowLoginModal(false); setLoginError(""); setLoginPassword(""); }} style={ghostBtn}>取消</button>
-              <button
-                onClick={login}
-                disabled={loginSaving || !loginPassword}
-                style={{ ...accentBtn, flex: 1, opacity: loginSaving || !loginPassword ? 0.5 : 1 }}
-              >
-                {loginSaving ? <><span className="spinner" />驗證中...</> : "登入"}
-              </button>
-            </div>
+      <Dialog
+        open={showLoginModal}
+        onOpenChange={(open) => { if (!open) { setShowLoginModal(false); setLoginError(""); setLoginPassword(""); } }}
+      >
+        <DialogContent
+          onInteractOutside={(e) => e.preventDefault()}
+          style={{ background: "var(--bg-main)", border: "1px solid var(--border)", maxWidth: 420, borderRadius: 16, padding: "24px 20px" }}
+        >
+          <DialogHeader>
+            <DialogTitle style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)" }}>🔑 管理員登入</DialogTitle>
+          </DialogHeader>
+          <div style={{ marginBottom: 20 }}>
+            <label style={labelSt}>密碼</label>
+            <Input
+              type="password"
+              value={loginPassword}
+              onChange={(e) => { setLoginPassword(e.target.value); setLoginError(""); }}
+              onKeyDown={(e) => e.key === "Enter" && login()}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              placeholder="輸入管理員密碼"
+              style={{ ...inputSt, borderColor: loginError ? "var(--morandi-red)" : undefined }}
+              autoFocus
+            />
+            {loginError && (
+              <p style={{ fontSize: 12, color: "var(--morandi-red)", margin: "6px 0 0" }}>{loginError}</p>
+            )}
           </div>
-        </div>
-      )}
+          <div style={{ display: "flex", gap: 8 }}>
+            <Button onClick={() => { setShowLoginModal(false); setLoginError(""); setLoginPassword(""); }} style={ghostBtn}>取消</Button>
+            <Button
+              onClick={login}
+              disabled={loginSaving || !loginPassword}
+              style={{ ...accentBtn, flex: 1, opacity: loginSaving || !loginPassword ? 0.5 : 1 }}
+            >
+              {loginSaving ? <><span className="spinner" />驗證中...</> : "登入"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Edit Modal ── */}
-      {editTarget && (
-        <div style={overlay}>
-          <div style={modalCard} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>編輯活動</h2>
-            <div style={{ marginBottom: 14 }}>
-              <label style={label}>活動名稱</label>
-              <input value={editName} onChange={(e) => setEditName(e.target.value)} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} style={input} autoFocus />
-            </div>
-            <div style={{ marginBottom: 14 }}>
-              <label style={label}>啟程日</label>
-              <input type="date" value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} style={input} />
-            </div>
-            <div style={{ marginBottom: 24 }}>
-              <label style={label}>賦歸日 <span style={{ fontWeight: 400, opacity: 0.7 }}>（選填）</span></label>
-              <input
-                type="date" value={editEndDate} min={editStartDate}
-                onChange={(e) => setEditEndDate(e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                style={{ ...input, borderColor: editEndDate && editEndDate < editStartDate ? "var(--morandi-red)" : undefined }}
-              />
-              {editEndDate && editEndDate < editStartDate && (
-                <p style={{ fontSize: 12, color: "var(--morandi-red)", margin: "4px 0 0" }}>迄止日不能早於起始日</p>
-              )}
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setEditTarget(null)} style={ghostBtn}>取消</button>
-              <button
-                onClick={saveEdit}
-                disabled={editSaving || !editName.trim() || !editStartDate || !!(editEndDate && editEndDate < editStartDate)}
-                style={{ ...accentBtn, flex: 1, opacity: editSaving || !editName.trim() || !editStartDate || !!(editEndDate && editEndDate < editStartDate) ? 0.5 : 1 }}
-              >
-                {editSaving ? <><span className="spinner" />儲存中...</> : "儲存"}
-              </button>
-            </div>
+      <Dialog open={!!editTarget} onOpenChange={(open) => { if (!open) setEditTarget(null); }}>
+        <DialogContent
+          onInteractOutside={(e) => e.preventDefault()}
+          style={{ background: "var(--bg-main)", border: "1px solid var(--border)", maxWidth: 420, borderRadius: 16, padding: "24px 20px" }}
+        >
+          <DialogHeader>
+            <DialogTitle style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)" }}>編輯活動</DialogTitle>
+          </DialogHeader>
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelSt}>活動名稱</label>
+            <Input value={editName} onChange={(e) => setEditName(e.target.value)} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} style={inputSt} autoFocus />
           </div>
-        </div>
-      )}
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelSt}>啟程日</label>
+            <Input type="date" value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} style={inputSt} />
+          </div>
+          <div style={{ marginBottom: 24 }}>
+            <label style={labelSt}>賦歸日 <span style={{ fontWeight: 400, opacity: 0.7 }}>（選填）</span></label>
+            <Input
+              type="date" value={editEndDate} min={editStartDate}
+              onChange={(e) => setEditEndDate(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              style={{ ...inputSt, borderColor: editEndDate && editEndDate < editStartDate ? "var(--morandi-red)" : undefined }}
+            />
+            {editEndDate && editEndDate < editStartDate && (
+              <p style={{ fontSize: 12, color: "var(--morandi-red)", margin: "4px 0 0" }}>迄止日不能早於起始日</p>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Button onClick={() => setEditTarget(null)} style={ghostBtn}>取消</Button>
+            <Button
+              onClick={saveEdit}
+              disabled={editSaving || !editName.trim() || !editStartDate || !!(editEndDate && editEndDate < editStartDate)}
+              style={{ ...accentBtn, flex: 1, opacity: editSaving || !editName.trim() || !editStartDate || !!(editEndDate && editEndDate < editStartDate) ? 0.5 : 1 }}
+            >
+              {editSaving ? <><span className="spinner" />儲存中...</> : "儲存"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Delete Confirm Modal ── */}
-      {deleteTarget && (
-        <div style={overlay}>
-          <div style={modalCard} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: "0 0 12px" }}>確定刪除活動？</h2>
-            <p style={{ fontSize: 15, color: "var(--text-sub)", lineHeight: 1.6, margin: "0 0 24px" }}>
-              「{deleteTarget.name}」及其所有費用、成員、還款紀錄將一併刪除，無法復原。
-            </p>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setDeleteTarget(null)} style={ghostBtn}>取消</button>
-              <button onClick={confirmDelete} style={{ flex: 1, padding: "12px 0", background: "var(--morandi-red)", color: "white", border: "none", borderRadius: 8, fontSize: 16, fontWeight: 600, cursor: "pointer" }}>
-                確定刪除
-              </button>
-            </div>
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <DialogContent
+          onInteractOutside={(e) => e.preventDefault()}
+          style={{ background: "var(--bg-main)", border: "1px solid var(--border)", maxWidth: 420, borderRadius: 16, padding: "24px 20px" }}
+        >
+          <DialogHeader>
+            <DialogTitle style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)" }}>確定刪除活動？</DialogTitle>
+          </DialogHeader>
+          <p style={{ fontSize: 15, color: "var(--text-sub)", lineHeight: 1.6, margin: "0 0 24px" }}>
+            「{deleteTarget?.name}」及其所有費用、成員、還款紀錄將一併刪除，無法復原。
+          </p>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Button onClick={() => setDeleteTarget(null)} style={ghostBtn}>取消</Button>
+            <Button onClick={confirmDelete} style={{ flex: 1, padding: "12px 0", background: "var(--morandi-red)", color: "white", border: "none", borderRadius: 8, fontSize: 16, fontWeight: 600, cursor: "pointer", height: "auto" }}>
+              確定刪除
+            </Button>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* ── Create Modal ── */}
-      {showModal && (
-        <div style={overlay}>
-          <div style={modalCard} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>新增活動</h2>
-            <div style={{ marginBottom: 14 }}>
-              <label style={label}>活動名稱</label>
-              <input value={name} onChange={(e) => setName(e.target.value)} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} placeholder="例：墾丁三天兩夜" style={input} autoFocus />
-            </div>
-            <div style={{ marginBottom: 14 }}>
-              <label style={label}>啟程日</label>
-              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} style={input} />
-            </div>
-            <div style={{ marginBottom: 24 }}>
-              <label style={label}>賦歸日 <span style={{ fontWeight: 400, opacity: 0.7 }}>（選填）</span></label>
-              <input
-                type="date" value={endDate} min={startDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                style={{ ...input, borderColor: endDate && endDate < startDate ? "var(--morandi-red)" : undefined }}
-              />
-              {endDate && endDate < startDate && (
-                <p style={{ fontSize: 12, color: "var(--morandi-red)", margin: "4px 0 0" }}>迄止日不能早於起始日</p>
-              )}
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setShowModal(false)} style={ghostBtn}>取消</button>
-              <button
-                onClick={createEvent}
-                disabled={saving || !name.trim() || !startDate || !!(endDate && endDate < startDate)}
-                style={{ ...accentBtn, flex: 1, opacity: saving || !name.trim() || !startDate || !!(endDate && endDate < startDate) ? 0.5 : 1 }}
-              >
-                {saving ? <><span className="spinner" />建立中...</> : "建立活動"}
-              </button>
-            </div>
+      <Dialog open={showModal} onOpenChange={(open) => { if (!open) setShowModal(false); }}>
+        <DialogContent
+          onInteractOutside={(e) => e.preventDefault()}
+          style={{ background: "var(--bg-main)", border: "1px solid var(--border)", maxWidth: 420, borderRadius: 16, padding: "24px 20px" }}
+        >
+          <DialogHeader>
+            <DialogTitle style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)" }}>新增活動</DialogTitle>
+          </DialogHeader>
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelSt}>活動名稱</label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} placeholder="例：墾丁三天兩夜" style={inputSt} autoFocus />
           </div>
-        </div>
-      )}
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelSt}>啟程日</label>
+            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} style={inputSt} />
+          </div>
+          <div style={{ marginBottom: 24 }}>
+            <label style={labelSt}>賦歸日 <span style={{ fontWeight: 400, opacity: 0.7 }}>（選填）</span></label>
+            <Input
+              type="date" value={endDate} min={startDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              style={{ ...inputSt, borderColor: endDate && endDate < startDate ? "var(--morandi-red)" : undefined }}
+            />
+            {endDate && endDate < startDate && (
+              <p style={{ fontSize: 12, color: "var(--morandi-red)", margin: "4px 0 0" }}>迄止日不能早於起始日</p>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Button onClick={() => setShowModal(false)} style={ghostBtn}>取消</Button>
+            <Button
+              onClick={createEvent}
+              disabled={saving || !name.trim() || !startDate || !!(endDate && endDate < startDate)}
+              style={{ ...accentBtn, flex: 1, opacity: saving || !name.trim() || !startDate || !!(endDate && endDate < startDate) ? 0.5 : 1 }}
+            >
+              {saving ? <><span className="spinner" />建立中...</> : "建立活動"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -391,16 +438,14 @@ const cardStyle: React.CSSProperties = {
   background: "var(--bg-card)",
   border: "1px solid var(--border)",
   borderRadius: 12,
-  padding: "16px 20px",
+  padding: 0,
   position: "relative",
   cursor: "pointer",
   transition: "border-color 0.15s",
+  boxShadow: "none",
 };
 
 const ghostDeleteBtn: React.CSSProperties = {
-  position: "absolute",
-  top: 12,
-  right: 12,
   background: "none",
   border: "none",
   cursor: "pointer",
@@ -408,29 +453,10 @@ const ghostDeleteBtn: React.CSSProperties = {
   lineHeight: 1,
   padding: 4,
   borderRadius: 6,
+  height: "auto",
 };
 
-const overlay: React.CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  background: "rgba(92,82,72,0.45)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  zIndex: 50,
-  padding: "0 16px",
-};
-
-const modalCard: React.CSSProperties = {
-  background: "var(--bg-main)",
-  border: "1px solid var(--border)",
-  borderRadius: 16,
-  padding: "24px 20px",
-  width: "100%",
-  maxWidth: 420,
-};
-
-const input: React.CSSProperties = {
+const inputSt: React.CSSProperties = {
   width: "100%",
   padding: "13px 14px",
   background: "var(--bg-card)",
@@ -439,9 +465,10 @@ const input: React.CSSProperties = {
   fontSize: 16,
   color: "var(--text-main)",
   outline: "none",
+  height: "auto",
 };
 
-const label: React.CSSProperties = {
+const labelSt: React.CSSProperties = {
   display: "block",
   fontSize: 14,
   color: "var(--text-sub)",
@@ -458,6 +485,7 @@ const accentBtn: React.CSSProperties = {
   fontSize: 16,
   fontWeight: 600,
   cursor: "pointer",
+  height: "auto",
 };
 
 const ghostBtn: React.CSSProperties = {
@@ -470,6 +498,7 @@ const ghostBtn: React.CSSProperties = {
   fontSize: 16,
   fontWeight: 600,
   cursor: "pointer",
+  height: "auto",
 };
 
 const ghostSmBtn: React.CSSProperties = {
@@ -481,4 +510,5 @@ const ghostSmBtn: React.CSSProperties = {
   fontSize: 15,
   fontWeight: 500,
   cursor: "pointer",
+  height: "auto",
 };
