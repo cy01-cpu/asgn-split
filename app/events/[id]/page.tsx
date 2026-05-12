@@ -4,6 +4,15 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ThemeSwitcher } from "../../components/ThemeSwitcher";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -728,20 +737,20 @@ export default function EventDetailPage() {
                   ))}
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <input
+                  <Input
                     value={newName}
                     onChange={(e) => { setNewName(e.target.value); setDupNameError(""); }}
                     onKeyDown={(e) => e.key === "Enter" && addMember()}
                     placeholder="輸入成員名稱"
                     style={{ ...inputSt, flex: 1, borderColor: dupNameError ? "var(--morandi-red)" : undefined }}
                   />
-                  <button
+                  <Button
                     onClick={addMember}
                     disabled={addingMember || !newName.trim() || !selectedEmoji}
-                    style={{ ...accentBtnSt, opacity: addingMember || !newName.trim() || !selectedEmoji ? 0.5 : 1 }}
+                    style={accentBtnSt}
                   >
                     {addingMember ? <><span className="spinner" />處理中...</> : "新增"}
-                  </button>
+                  </Button>
                 </div>
                 {dupNameError && (
                   <p style={{ fontSize: 12, color: "var(--morandi-red)", margin: "6px 0 0" }}>
@@ -780,7 +789,7 @@ export default function EventDetailPage() {
                             </button>
                           ))}
                         </div>
-                        <input
+                        <Input
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
                           onKeyDown={(e) => e.key === "Enter" && updateMember()}
@@ -788,19 +797,19 @@ export default function EventDetailPage() {
                           style={inputSt}
                         />
                         <div style={{ display: "flex", gap: 8 }}>
-                          <button
+                          <Button
                             onClick={() => setEditingId(null)}
                             style={{ ...ghostBtnSt, flex: 1 }}
                           >
                             取消
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             onClick={updateMember}
                             disabled={savingEdit || !editName.trim()}
-                            style={{ ...accentBtnSt, flex: 2, opacity: savingEdit || !editName.trim() ? 0.5 : 1 }}
+                            style={{ ...accentBtnSt, flex: 2 }}
                           >
                             {savingEdit ? <><span className="spinner" />儲存中...</> : "確認"}
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     ) : (
@@ -809,22 +818,22 @@ export default function EventDetailPage() {
                         <span style={{ fontWeight: 600, fontSize: 16 }}>{p.emoji} {p.name}</span>
                         {!(event.isSettled && !isAdmin) && (
                           <div style={{ display: "flex", gap: 2 }}>
-                            <button
+                            <Button
                               onClick={() => startEdit(p)}
                               disabled={deletingMemberId === p.id}
-                              style={{ ...deleteIconBtn, fontSize: 15, opacity: deletingMemberId === p.id ? 0.35 : 1 }}
+                              style={{ ...deleteIconBtn, fontSize: 15 }}
                               title="編輯成員"
                             >
                               ✏️
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                               onClick={() => deleteMember(p.id)}
                               disabled={deletingMemberId === p.id}
-                              style={{ ...deleteIconBtn, fontSize: 15, opacity: deletingMemberId === p.id ? 0.35 : 1, minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
+                              style={{ ...deleteIconBtn, fontSize: 15, minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
                               title="刪除成員"
                             >
                               {deletingMemberId === p.id ? <span className="spinner-sm" /> : "🗑️"}
-                            </button>
+                            </Button>
                           </div>
                         )}
                       </div>
@@ -840,7 +849,7 @@ export default function EventDetailPage() {
             <div>
               {!(event.isSettled && !isAdmin) && (
                 <>
-                  <button
+                  <Button
                     onClick={openExpModal}
                     disabled={event.participants.length === 0}
                     style={{
@@ -848,11 +857,10 @@ export default function EventDetailPage() {
                       width: "100%",
                       marginBottom: 16,
                       padding: "14px 0",
-                      opacity: event.participants.length === 0 ? 0.5 : 1,
                     }}
                   >
                     ＋ 新增費用
-                  </button>
+                  </Button>
                   {event.participants.length === 0 && (
                     <p style={{ textAlign: "center", fontSize: 14, color: "var(--text-sub)", marginBottom: 12 }}>
                       請先至「成員」頁籤新增參與者
@@ -885,22 +893,22 @@ export default function EventDetailPage() {
                           </div>
                           {!(event.isSettled && !isAdmin) && (
                             <div style={{ display: "flex", gap: 2 }}>
-                              <button
+                              <Button
                                 onClick={(e) => { e.stopPropagation(); openExpEditModal(exp); }}
                                 disabled={deletingExpId === exp.id}
-                                style={{ ...deleteIconBtn, opacity: deletingExpId === exp.id ? 0.35 : 1 }}
+                                style={deleteIconBtn}
                                 title="編輯費用"
                               >
                                 ✏️
-                              </button>
-                              <button
+                              </Button>
+                              <Button
                                 onClick={(e) => { e.stopPropagation(); deleteExpense(exp.id); }}
                                 disabled={deletingExpId === exp.id}
-                                style={{ ...deleteIconBtn, opacity: deletingExpId === exp.id ? 0.35 : 1, minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
+                                style={{ ...deleteIconBtn, minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
                                 title="刪除費用"
                               >
                                 {deletingExpId === exp.id ? <span className="spinner-sm" /> : "🗑️"}
-                              </button>
+                              </Button>
                             </div>
                           )}
                         </div>
@@ -1057,22 +1065,22 @@ export default function EventDetailPage() {
                         </div>
                         {!(event.isSettled && !isAdmin) && (
                           <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
-                            <button
+                            <Button
                               onClick={() => openRepayModal(r)}
                               disabled={deletingRepayId === r.id}
-                              style={{ ...deleteIconBtn, opacity: deletingRepayId === r.id ? 0.35 : 1 }}
+                              style={deleteIconBtn}
                               title="編輯還款紀錄"
                             >
                               ✏️
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                               onClick={() => deleteRepayment(r.id)}
                               disabled={deletingRepayId === r.id}
-                              style={{ ...deleteIconBtn, minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center", opacity: deletingRepayId === r.id ? 0.35 : 1 }}
+                              style={{ ...deleteIconBtn, minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
                               title="刪除還款紀錄"
                             >
                               {deletingRepayId === r.id ? <span className="spinner-sm" /> : "🗑️"}
-                            </button>
+                            </Button>
                           </div>
                         )}
                       </div>
@@ -1082,27 +1090,29 @@ export default function EventDetailPage() {
                         尚無還款紀錄
                       </div>
                     )}
-                    {!(event.isSettled && !isAdmin) && <button
-                      onClick={() => openRepayModal()}
-                      disabled={!event || event.participants.length < 2}
-                      style={{
-                        width: "100%",
-                        padding: "12px 0",
-                        borderRadius: 10,
-                        border: "1px dashed var(--border)",
-                        background: "transparent",
-                        color: "var(--text-sub)",
-                        fontSize: 15,
-                        cursor: "pointer",
-                      }}
-                    >
-                      ＋ 新增還款紀錄
-                    </button>}
+                    {!(event.isSettled && !isAdmin) && (
+                      <button
+                        onClick={() => openRepayModal()}
+                        disabled={!event || event.participants.length < 2}
+                        style={{
+                          width: "100%",
+                          padding: "12px 0",
+                          borderRadius: 10,
+                          border: "1px dashed var(--border)",
+                          background: "transparent",
+                          color: "var(--text-sub)",
+                          fontSize: 15,
+                          cursor: "pointer",
+                        }}
+                      >
+                        ＋ 新增還款紀錄
+                      </button>
+                    )}
                   </div>
 
                   {/* Copy + Refresh */}
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    <button
+                    <Button
                       onClick={copySettlement}
                       disabled={copied}
                       style={{
@@ -1114,14 +1124,12 @@ export default function EventDetailPage() {
                         color: "white",
                         fontSize: 16,
                         fontWeight: 600,
-                        cursor: copied ? "not-allowed" : "pointer",
                         transition: "background 0.2s",
-                        opacity: copied ? 0.85 : 1,
                       }}
                     >
                       {copied ? "✅ 已複製！" : "📋 複製結算結果"}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={fetchSettlement}
                       style={{
                         width: "100%",
@@ -1131,13 +1139,12 @@ export default function EventDetailPage() {
                         background: "var(--bg-card)",
                         color: "var(--text-sub)",
                         fontSize: 15,
-                        cursor: "pointer",
                       }}
                     >
                       🔄 重新計算
-                    </button>
+                    </Button>
                     {isAdmin && event && (
-                      <button
+                      <Button
                         onClick={() => {
                           setSettleAction(event.isSettled ? "unsettle" : "settle");
                           setShowSettleModal(true);
@@ -1151,11 +1158,10 @@ export default function EventDetailPage() {
                           color: event.isSettled ? "var(--text-sub)" : "white",
                           fontSize: 15,
                           fontWeight: 600,
-                          cursor: "pointer",
                         }}
                       >
                         {event.isSettled ? "🔓 重啟釐算" : "🔒 帳目兩訖"}
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </>
@@ -1190,7 +1196,7 @@ export default function EventDetailPage() {
 
             {/* Title */}
             <Field label="費用標題">
-              <input
+              <Input
                 value={expTitle}
                 onChange={(e) => setExpTitle(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
@@ -1203,7 +1209,7 @@ export default function EventDetailPage() {
 
             {/* Amount */}
             <Field label="金額（元）">
-              <input
+              <Input
                 type="text"
                 inputMode="decimal"
                 value={expAmount}
@@ -1222,17 +1228,23 @@ export default function EventDetailPage() {
 
             {/* Paid by */}
             <Field label="誰付的">
-              <select
-                value={expPaidById}
-                onChange={(e) => setExpPaidById(Number(e.target.value))}
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                style={inputSt}
+              <Select
+                value={String(expPaidById)}
+                onValueChange={(v) => setExpPaidById(Number(v))}
               >
-                {event.participants.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
+                <SelectTrigger
+                  style={inputSt}
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {event.participants.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
 
             {/* Split mode */}
@@ -1370,7 +1382,7 @@ export default function EventDetailPage() {
                         }}
                       >
                         <span style={{ flex: 1, fontSize: 15 }}>{p.name}</span>
-                        <input
+                        <Input
                           type="number"
                           value={customRatios[p.id] ?? "0"}
                           onChange={(e) =>
@@ -1407,8 +1419,8 @@ export default function EventDetailPage() {
 
             {/* Buttons */}
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-              <button onClick={() => setShowExpModal(false)} style={ghostBtnSt}>取消</button>
-              <button
+              <Button onClick={() => setShowExpModal(false)} style={ghostBtnSt}>取消</Button>
+              <Button
                 onClick={saveExpense}
                 disabled={
                   savingExp ||
@@ -1417,25 +1429,15 @@ export default function EventDetailPage() {
                   expPaidById === "" ||
                   (splitMode === "custom" && customRatioSum !== 100)
                 }
-                style={{
-                  ...accentBtnSt,
-                  flex: 1,
-                  opacity:
-                    savingExp ||
-                    !expTitle.trim() ||
-                    !expAmount ||
-                    expPaidById === "" ||
-                    (splitMode === "custom" && customRatioSum !== 100)
-                      ? 0.5
-                      : 1,
-                }}
+                style={{ ...accentBtnSt, flex: 1 }}
               >
                 {savingExp ? <><span className="spinner" />處理中...</> : editingExpId !== null ? "儲存變更" : "新增費用"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       )}
+
       {/* ────────────── Repayment Modal ────────────── */}
       {showRepayModal && (
         <div
@@ -1460,35 +1462,47 @@ export default function EventDetailPage() {
             </h2>
 
             <Field label="誰還款">
-              <select
-                value={repayFromId}
-                onChange={(e) => setRepayFromId(Number(e.target.value))}
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                style={inputSt}
+              <Select
+                value={String(repayFromId)}
+                onValueChange={(v) => setRepayFromId(Number(v))}
               >
-                {event.participants.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
+                <SelectTrigger
+                  style={inputSt}
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {event.participants.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
 
             <Field label="還給誰">
-              <select
-                value={repayToId}
-                onChange={(e) => setRepayToId(Number(e.target.value))}
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                style={inputSt}
+              <Select
+                value={String(repayToId)}
+                onValueChange={(v) => setRepayToId(Number(v))}
               >
-                {event.participants.map((p) => (
-                  <option key={p.id} value={p.id} disabled={p.id === repayFromId}>{p.name}</option>
-                ))}
-              </select>
+                <SelectTrigger
+                  style={inputSt}
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {event.participants.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)} disabled={p.id === repayFromId}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
 
             <Field label="金額（元）">
-              <input
+              <Input
                 type="number"
                 value={repayAmount}
                 onChange={(e) => setRepayAmount(e.target.value)}
@@ -1535,7 +1549,7 @@ export default function EventDetailPage() {
             </Field>
 
             <Field label="備註（選填）">
-              <input
+              <Input
                 value={repayNote}
                 onChange={(e) => {
                   setRepayNote(e.target.value);
@@ -1550,18 +1564,14 @@ export default function EventDetailPage() {
             </Field>
 
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-              <button onClick={() => setShowRepayModal(false)} style={ghostBtnSt}>取消</button>
-              <button
+              <Button onClick={() => setShowRepayModal(false)} style={ghostBtnSt}>取消</Button>
+              <Button
                 onClick={addRepayment}
                 disabled={savingRepay || repayFromId === "" || repayToId === "" || !repayAmount || repayFromId === repayToId}
-                style={{
-                  ...accentBtnSt,
-                  flex: 1,
-                  opacity: savingRepay || repayFromId === "" || repayToId === "" || !repayAmount || repayFromId === repayToId ? 0.5 : 1,
-                }}
+                style={{ ...accentBtnSt, flex: 1 }}
               >
                 {savingRepay ? <><span className="spinner" />處理中...</> : editingRepayId !== null ? "儲存變更" : "新增紀錄"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1585,24 +1595,23 @@ export default function EventDetailPage() {
                 : "解除後活動將回到進行中，可繼續編輯費用與成員。"}
             </p>
             <div style={{ display: "flex", gap: 8 }}>
-              <button
+              <Button
                 onClick={() => setShowSettleModal(false)}
-                style={{ flex: 1, padding: "12px 0", background: "var(--bg-card)", color: "var(--text-main)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 16, fontWeight: 600, cursor: "pointer" }}
+                style={{ flex: 1, padding: "12px 0", background: "var(--bg-card)", color: "var(--text-main)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 16, fontWeight: 600 }}
               >
                 取消
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={confirmSettle}
                 disabled={savingSettle}
                 style={{
-                  flex: 1, padding: "12px 0", border: "none", borderRadius: 8, fontSize: 16, fontWeight: 600, cursor: "pointer",
+                  flex: 1, padding: "12px 0", border: "none", borderRadius: 8, fontSize: 16, fontWeight: 600,
                   background: settleAction === "settle" ? "var(--morandi-green)" : "var(--morandi-purple)",
                   color: "white",
-                  opacity: savingSettle ? 0.6 : 1,
                 }}
               >
                 {savingSettle ? "處理中..." : settleAction === "settle" ? "帳目兩訖" : "重啟釐算"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
