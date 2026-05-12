@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ThemeSwitcher } from "../../components/ThemeSwitcher";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -1190,9 +1191,18 @@ export default function EventDetailPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ width: 36, height: 4, background: "var(--border)", borderRadius: 2, margin: "0 auto 20px" }} />
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>
-              {editingExpId !== null ? "編輯費用" : "新增費用"}
-            </h2>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: 0 }}>
+                {editingExpId !== null ? "編輯費用" : "新增費用"}
+              </h2>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowExpModal(false); }}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="rounded-full p-1.5 text-[#8c7e72] hover:text-[#5c5248] hover:bg-[#e8e0d5] transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
             {/* Title */}
             <Field label="費用標題">
@@ -1457,9 +1467,18 @@ export default function EventDetailPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ width: 36, height: 4, background: "var(--border)", borderRadius: 2, margin: "0 auto 20px" }} />
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: "0 0 20px" }}>
-              {editingRepayId !== null ? "編輯還款紀錄" : "新增還款紀錄"}
-            </h2>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: 0 }}>
+                {editingRepayId !== null ? "編輯還款紀錄" : "新增還款紀錄"}
+              </h2>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowRepayModal(false); }}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="rounded-full p-1.5 text-[#8c7e72] hover:text-[#5c5248] hover:bg-[#e8e0d5] transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
             <Field label="誰還款">
               <Select
@@ -1586,9 +1605,17 @@ export default function EventDetailPage() {
             style={{ background: "var(--bg-main)", border: "1px solid var(--border)", borderRadius: 16, padding: "24px 20px", width: "100%", maxWidth: 420 }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: "0 0 12px" }}>
-              {settleAction === "settle" ? "確認帳目兩訖？" : "確認重啟釐算？"}
-            </h2>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: 0 }}>
+                {settleAction === "settle" ? "確認帳目兩訖？" : "確認重啟釐算？"}
+              </h2>
+              <button
+                onClick={() => setShowSettleModal(false)}
+                className="rounded-full p-1.5 text-[#8c7e72] hover:text-[#5c5248] hover:bg-[#e8e0d5] transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
             <p style={{ fontSize: 15, color: "var(--text-sub)", lineHeight: 1.65, margin: "0 0 24px" }}>
               {settleAction === "settle"
                 ? "標記後活動將移至「已結清」區塊，仍可隨時解除。"
