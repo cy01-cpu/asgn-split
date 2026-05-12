@@ -4,6 +4,8 @@
 
 旅遊、聚餐分帳 Web App。多人建立活動、記錄費用、設定分攤比例，即時同步（SSE），一鍵複製結算報告。
 
+🔗 **線上展示：** https://asgn-split.vercel.app
+
 ## 功能
 
 - **活動管理**：建立 / 編輯 / 刪除旅遊或聚餐活動，支援日期區間
@@ -19,55 +21,32 @@
 
 | 層 | 技術 |
 |---|---|
-| Framework | Next.js 16 (App Router, Turbopack) |
+| Framework | Next.js 16 (App Router) + TypeScript |
 | UI | shadcn/ui + Tailwind CSS v4 |
-| Database | PostgreSQL (Zeabur) |
-| ORM | Prisma 7 (`prisma.config.ts`) |
+| ORM / DB | Prisma 7 (Migrate) + PostgreSQL（托管於 Zeabur） |
 | Realtime | Server-Sent Events (SSE) |
-| Deploy | Zeabur |
+| Deploy | Vercel + PWA |
 
 ## 開始開發
 
-### 1. 安裝相依套件
+### 安裝並啟動
 
 ```bash
 npm install
-```
-
-### 2. 環境變數
-
-複製範本並填入實際值：
-
-```bash
 cp .env.example .env
+# 填入 DATABASE_URL 和 ADMIN_PASSWORD
+npx prisma migrate deploy
+npm run dev
 ```
+
+開啟 [http://localhost:3000](http://localhost:3000)。
+
+### 環境變數
 
 | 變數 | 說明 |
 |---|---|
 | `DATABASE_URL` | PostgreSQL 連線字串 |
 | `ADMIN_PASSWORD` | 管理員登入密碼 |
-
-### 3. 初始化資料庫
-
-若資料庫是全新的，執行 migrate deploy 建立資料表：
-
-```bash
-npx prisma migrate deploy
-```
-
-若資料庫已存在（例如接手既有 DB），改用 baseline 標記：
-
-```bash
-npx prisma migrate resolve --applied 20250512000000_init
-```
-
-### 4. 啟動開發伺服器
-
-```bash
-npm run dev
-```
-
-開啟 [http://localhost:3000](http://localhost:3000)。
 
 ## 資料庫 Schema
 
@@ -83,6 +62,12 @@ Event
 
 ```bash
 npx prisma migrate dev --name <migration-name>
+```
+
+若接手既有資料庫（已有資料表），改用 baseline 標記：
+
+```bash
+npx prisma migrate resolve --applied 20250512000000_init
 ```
 
 ## 部署

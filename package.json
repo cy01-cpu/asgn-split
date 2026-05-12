@@ -1,6 +1,7 @@
 {
   "name": "asgn-split",
   "version": "0.1.0",
+  "description": "結伴釐算 — 多人帳單分攤計算工具",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
