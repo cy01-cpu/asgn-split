@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -21,6 +21,10 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "分攤計算",
   },
+};
+
+// Next 16 起 themeColor 須改放 viewport export（不再放 metadata），否則 build 會警告。
+export const viewport: Viewport = {
   themeColor: "#9b8ea0",
 };
 
@@ -36,7 +40,6 @@ export default function RootLayout({
     >
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#9b8ea0" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="分攤計算" />
