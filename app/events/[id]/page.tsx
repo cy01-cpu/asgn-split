@@ -76,11 +76,6 @@ type SplitMode = "equal" | "custom";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function fmtDate(s: string) {
-  const [y, m, d] = s.slice(0, 10).split("-");
-  return `${y}/${m}/${d}`;
-}
-
 function fmtDateRange(startIso: string, endIso: string | null) {
   const [sy, sm, sd] = startIso.slice(0, 10).split("-");
   const start = `${sy}/${sm}/${sd}`;
@@ -114,7 +109,6 @@ function evalAmountExpr(s: string): number | null {
   if (!trimmed) return null;
   if (!/^[\d\s+\-*/().]+$/.test(trimmed)) return null;
   try {
-    // eslint-disable-next-line no-new-func
     const result = new Function(`"use strict"; return (${trimmed})`)();
     if (typeof result !== "number" || !isFinite(result) || result <= 0) return null;
     return Math.round(result);
@@ -200,6 +194,12 @@ export default function EventDetailPage() {
   const [savingRepay, setSavingRepay] = useState(false);
   const [deletingRepayId, setDeletingRepayId] = useState<number | null>(null);
 
+  // Delete confirmation state
+  const [deleteTarget, setDeleteTarget] = useState<{ type: "member" | "expense" | "repayment"; id: number; label: string } | null>(null);
+
+  // Error state
+  const [opError, setOpError] = useState("");
+
   // SSE state
   const [sseStatus, setSseStatus] = useState<"connected" | "reconnecting">("reconnecting");
 
@@ -245,18 +245,16 @@ export default function EventDetailPage() {
   // ── SSE ────────────────────────────────────────────────────────────────────────
 
   // Ref keeps latest callbacks without changing SSE effect deps
-  const onSseUpdateRef = useRef(() => {
-    fetchEvent();
-    fetchSettlement();
-    fetchRepayments();
-  });
+  const onSseUpdateRef = useRef(() => { fetchEvent(); });
   useEffect(() => {
     onSseUpdateRef.current = () => {
       fetchEvent();
-      fetchSettlement();
-      fetchRepayments();
+      if (tab === "settlement") {
+        fetchSettlement();
+        fetchRepayments();
+      }
     };
-  }, [fetchEvent, fetchSettlement, fetchRepayments]);
+  }, [fetchEvent, fetchSettlement, fetchRepayments, tab]);
 
   useEffect(() => {
     let es: EventSource;
@@ -341,7 +339,11 @@ export default function EventDetailPage() {
   }
 
   async function deleteMember(pid: number) {
-    if (!confirm("確定要刪除這位成員嗎？\n若有相關費用記錄將無法刪除。")) return;
+    const p = event?.participants.find((x) => x.id === pid);
+    setDeleteTarget({ type: "member", id: pid, label: p?.name ?? "此成員" });
+  }
+
+  async function doDeleteMember(pid: number) {
     setDeletingMemberId(pid);
     const res = await fetch(`/api/events/${eventId}/participants`, {
       method: "DELETE",
@@ -350,7 +352,7 @@ export default function EventDetailPage() {
     });
     setDeletingMemberId(null);
     if (!res.ok) {
-      alert("❌ 無法刪除：此成員有相關費用記錄，請先刪除費用後再試。");
+      setOpError("❌ 無法刪除：此成員有相關費用記錄，請先刪除費用後再試。");
       return;
     }
     fetchEvent();
@@ -439,28 +441,37 @@ export default function EventDetailPage() {
     }
 
     setSavingExp(true);
+    let res: Response;
     if (editingExpId !== null) {
-      await fetch(`/api/events/${eventId}/expenses`, {
+      res = await fetch(`/api/events/${eventId}/expenses`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: editingExpId, paidById: expPaidById, title: expTitle.trim(), amount: total, shares }),
       });
     } else {
-      await fetch(`/api/events/${eventId}/expenses`, {
+      res = await fetch(`/api/events/${eventId}/expenses`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ paidById: expPaidById, title: expTitle.trim(), amount: total, shares }),
       });
     }
     setSavingExp(false);
+    if (!res.ok) {
+      setOpError("❌ 儲存費用失敗，請再試一次。");
+      return;
+    }
     setShowExpModal(false);
     setEditingExpId(null);
     fetchEvent();
     if (tab === "settlement") fetchSettlement();
   }
 
-  async function deleteExpense(expId: number) {
-    if (!confirm("確定要刪除這筆費用嗎？")) return;
+  function deleteExpense(expId: number) {
+    const exp = event?.expenses.find((x) => x.id === expId);
+    setDeleteTarget({ type: "expense", id: expId, label: exp?.title ?? "此費用" });
+  }
+
+  async function doDeleteExpense(expId: number) {
     setDeletingExpId(expId);
     await fetch(`/api/events/${eventId}/expenses`, {
       method: "DELETE",
@@ -521,27 +532,36 @@ export default function EventDetailPage() {
   async function addRepayment() {
     if (repayFromId === "" || repayToId === "" || !repayAmount || repayFromId === repayToId) return;
     setSavingRepay(true);
+    let res: Response;
     if (editingRepayId !== null) {
-      await fetch(`/api/events/${eventId}/repayments`, {
+      res = await fetch(`/api/events/${eventId}/repayments`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: editingRepayId, fromId: repayFromId, toId: repayToId, amount: Number(repayAmount), note: repayNote }),
       });
     } else {
-      await fetch(`/api/events/${eventId}/repayments`, {
+      res = await fetch(`/api/events/${eventId}/repayments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fromId: repayFromId, toId: repayToId, amount: Number(repayAmount), note: repayNote }),
       });
     }
     setSavingRepay(false);
+    if (!res.ok) {
+      setOpError("❌ 儲存還款紀錄失敗，請再試一次。");
+      return;
+    }
     setShowRepayModal(false);
     fetchSettlement();
     fetchRepayments();
   }
 
-  async function deleteRepayment(rid: number) {
-    if (!confirm("確定要刪除這筆還款紀錄嗎？")) return;
+  function deleteRepayment(rid: number) {
+    const r = repayments.find((x) => x.id === rid);
+    setDeleteTarget({ type: "repayment", id: rid, label: r ? `${r.fromParticipant.name} → ${r.toParticipant.name}` : "此還款紀錄" });
+  }
+
+  async function doDeleteRepayment(rid: number) {
     setDeletingRepayId(rid);
     await fetch(`/api/events/${eventId}/repayments`, {
       method: "DELETE",
@@ -689,13 +709,13 @@ export default function EventDetailPage() {
         {/* ── Readonly Banner ── */}
         {event.isSettled && !isAdmin && (
           <div style={{
-            background: "#e8f0eb",
-            color: "#4a7c59",
+            background: "rgba(122,158,135,0.12)",
+            color: "var(--morandi-green)",
             fontSize: 14,
             fontWeight: 600,
             padding: "10px 16px",
             textAlign: "center",
-            borderBottom: "1px solid #c4dace",
+            borderBottom: "1px solid rgba(122,158,135,0.3)",
           }}>
             🔒 此活動已圓滿平帳，僅供檢視
           </div>
@@ -1171,6 +1191,83 @@ export default function EventDetailPage() {
           )}
         </div>
       </div>
+
+      {/* ────────────── Error Banner ────────────── */}
+      {opError && (
+        <div
+          style={{
+            position: "fixed",
+            top: 16,
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "var(--morandi-red)",
+            color: "white",
+            padding: "10px 16px",
+            borderRadius: 10,
+            fontSize: 14,
+            fontWeight: 600,
+            zIndex: 100,
+            maxWidth: 360,
+            textAlign: "center",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            cursor: "pointer",
+          }}
+          onClick={() => setOpError("")}
+        >
+          {opError}
+        </div>
+      )}
+
+      {/* ────────────── Delete Confirm Modal ────────────── */}
+      {deleteTarget && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(92,82,72,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "0 16px" }}
+        >
+          <div
+            style={{ background: "var(--bg-main)", border: "1px solid var(--border)", borderRadius: 16, padding: "24px 20px", width: "100%", maxWidth: 420 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: 0 }}>
+                {deleteTarget.type === "member" ? "刪除成員？" : deleteTarget.type === "expense" ? "刪除費用？" : "刪除還款紀錄？"}
+              </h2>
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="rounded-full p-1.5 text-[#8c7e72] hover:text-[#5c5248] hover:bg-[#e8e0d5] transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <p style={{ fontSize: 15, color: "var(--text-sub)", lineHeight: 1.65, margin: "0 0 24px" }}>
+              {deleteTarget.type === "member"
+                ? `確定要刪除「${deleteTarget.label}」嗎？若有相關費用記錄將無法刪除。`
+                : deleteTarget.type === "expense"
+                ? `確定要刪除費用「${deleteTarget.label}」嗎？此操作無法復原。`
+                : `確定要刪除「${deleteTarget.label}」的還款紀錄嗎？`}
+            </p>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Button
+                onClick={() => setDeleteTarget(null)}
+                style={{ flex: 1, padding: "12px 0", background: "var(--bg-card)", color: "var(--text-main)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 16, fontWeight: 600 }}
+              >
+                取消
+              </Button>
+              <Button
+                onClick={() => {
+                  const t = deleteTarget;
+                  setDeleteTarget(null);
+                  if (t.type === "member") doDeleteMember(t.id);
+                  else if (t.type === "expense") doDeleteExpense(t.id);
+                  else doDeleteRepayment(t.id);
+                }}
+                style={{ flex: 1, padding: "12px 0", border: "none", borderRadius: 8, fontSize: 16, fontWeight: 600, background: "var(--morandi-red)", color: "white" }}
+              >
+                確定刪除
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ────────────── Expense Modal ────────────── */}
       {showExpModal && (
