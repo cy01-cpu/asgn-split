@@ -7,6 +7,7 @@ import { ThemeSwitcher } from "../../components/ThemeSwitcher";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { buildEqualShares, buildCustomShares } from "@/lib/shares";
 import {
   Select,
   SelectContent,
@@ -89,21 +90,6 @@ function fmtNT(n: number) {
   return `NT$${Math.abs(n).toLocaleString()}`;
 }
 
-function buildEqualShares(
-  ids: number[],
-  total: number
-): { participantId: number; shareRatio: number; amount: number }[] {
-  const n = ids.length;
-  if (n === 0) return [];
-  const base = Math.floor(total / n);
-  let distributed = 0;
-  return ids.map((id, i) => {
-    const amt = i === n - 1 ? total - distributed : base;
-    distributed += amt;
-    return { participantId: id, shareRatio: 1 / n, amount: amt };
-  });
-}
-
 function evalAmountExpr(s: string): number | null {
   const trimmed = s.trim();
   if (!trimmed) return null;
@@ -115,28 +101,6 @@ function evalAmountExpr(s: string): number | null {
   } catch {
     return null;
   }
-}
-
-function buildCustomShares(
-  entries: { id: number; ratio: number }[],
-  total: number
-): { participantId: number; shareRatio: number; amount: number }[] {
-  const active = entries.filter((e) => e.ratio > 0);
-  const totalRatio = active.reduce((s, e) => s + e.ratio, 0);
-  if (totalRatio === 0) return [];
-  let distributed = 0;
-  return active.map((e, i) => {
-    const amt =
-      i === active.length - 1
-        ? total - distributed
-        : Math.floor((e.ratio / totalRatio) * total);
-    distributed += amt;
-    return {
-      participantId: e.id,
-      shareRatio: e.ratio / totalRatio,
-      amount: amt,
-    };
-  });
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -444,17 +408,27 @@ export default function EventDetailPage() {
     const total = evalAmountExpr(expAmount) ?? Number(expAmount);
     if (!event) return;
 
-    let shares;
+    // lib/shares.ts 回傳 { memberId, amount }；後端額外要求 shareRatio，
+    // 故在此補回（平均 = 1/人數；自訂 = 比例/有效比例總和）並改名 participantId。
+    let shares: { participantId: number; shareRatio: number; amount: number }[];
     if (splitMode === "equal") {
-      shares = buildEqualShares([...equalSelected], total);
+      const ids = [...equalSelected];
+      shares = buildEqualShares(total, ids).map((s) => ({
+        participantId: s.memberId,
+        shareRatio: 1 / ids.length,
+        amount: s.amount,
+      }));
     } else {
-      shares = buildCustomShares(
-        event.participants.map((p) => ({
-          id: p.id,
-          ratio: Number(customRatios[p.id] ?? 0),
-        })),
-        total
-      );
+      const ratios = event.participants.map((p) => ({
+        memberId: p.id,
+        ratio: Number(customRatios[p.id] ?? 0),
+      }));
+      const totalRatio = ratios.reduce((sum, r) => sum + (r.ratio > 0 ? r.ratio : 0), 0);
+      shares = buildCustomShares(total, ratios).map((s) => ({
+        participantId: s.memberId,
+        shareRatio: totalRatio > 0 ? ratios.find((r) => r.memberId === s.memberId)!.ratio / totalRatio : 0,
+        amount: s.amount,
+      }));
     }
 
     if (shares.length === 0) {

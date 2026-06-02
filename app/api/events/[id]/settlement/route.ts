@@ -1,4 +1,5 @@
 import { db } from "@/app/lib/db";
+import { calcSettlement } from "@/lib/settlement";
 import type { NextRequest } from "next/server";
 
 export async function GET(
@@ -45,42 +46,26 @@ export async function GET(
     balance: balanceMap.get(p.id) ?? 0,
   }));
 
-  // 直覺還款模式：每個欠錢的人，按各債主被欠比例分別轉帳
-  type Entry = { participantId: number; name: string; emoji: string; amount: number };
-  const creditors: Entry[] = [];
-  const debtors: Entry[] = [];
+  // 貪心最小轉帳邏輯抽到 lib/settlement.ts（純函式、可單測）。
+  const balanceRecord: Record<number, number> = {};
+  for (const [pid, bal] of balanceMap) balanceRecord[pid] = bal;
+  const transfers = calcSettlement(
+    participants as { id: number; name: string; emoji: string }[],
+    balanceRecord
+  );
 
-  for (const b of balances) {
-    if (b.balance > 0) creditors.push({ ...b, amount: b.balance });
-    else if (b.balance < 0) debtors.push({ ...b, amount: -b.balance });
-  }
-
-  const settlements: {
-    from: { participantId: number; name: string; emoji: string };
-    to: { participantId: number; name: string; emoji: string };
-    amount: number;
-  }[] = [];
-
-  // 貪心最小轉帳：每次撮合最大債主與最大債務人，最多 max(creditors, debtors) 筆
-  const creditorPool = creditors.map((c) => ({ ...c })).sort((a, b) => b.amount - a.amount);
-  const debtorPool = debtors.map((d) => ({ ...d })).sort((a, b) => b.amount - a.amount);
-  let ci = 0, di = 0;
-  while (ci < creditorPool.length && di < debtorPool.length) {
-    const c = creditorPool[ci];
-    const d = debtorPool[di];
-    const transfer = Math.min(c.amount, d.amount);
-    if (transfer > 0) {
-      settlements.push({
-        from: { participantId: d.participantId, name: d.name, emoji: d.emoji },
-        to: { participantId: c.participantId, name: c.name, emoji: c.emoji },
-        amount: transfer,
-      });
-    }
-    c.amount -= transfer;
-    d.amount -= transfer;
-    if (c.amount === 0) ci++;
-    if (d.amount === 0) di++;
-  }
+  // calcSettlement 以名稱表示 from/to；補回 participantId/emoji 維持既有 API 形狀。
+  // 同活動內成員名稱唯一（新增成員時已去重），故以名稱對應安全。
+  const byName = new Map(balances.map((b) => [b.name, b]));
+  const settlements = transfers.map((t) => {
+    const from = byName.get(t.from)!;
+    const to = byName.get(t.to)!;
+    return {
+      from: { participantId: from.participantId, name: from.name, emoji: from.emoji },
+      to: { participantId: to.participantId, name: to.name, emoji: to.emoji },
+      amount: t.amount,
+    };
+  });
 
   return Response.json({ settlements, balances });
 }
