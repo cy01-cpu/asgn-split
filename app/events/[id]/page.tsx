@@ -261,12 +261,19 @@ export default function EventDetailPage() {
     let reconnectTimer: ReturnType<typeof setTimeout>;
     let cancelled = false;
 
+    // 指數退避：3s → 6s → 12s …，最長 30s。連線成功後歸零，下次斷線重新從 3s 起算。
+    const BASE_DELAY = 3000;
+    const MAX_DELAY = 30000;
+    let reconnectDelay = BASE_DELAY;
+
     function connect() {
       if (cancelled) return;
       es = new EventSource(`/api/events/${eventId}/stream`);
 
       es.onopen = () => {
-        if (!cancelled) setSseStatus("connected");
+        if (cancelled) return;
+        setSseStatus("connected");
+        reconnectDelay = BASE_DELAY;
       };
 
       es.onmessage = (e) => {
@@ -283,7 +290,8 @@ export default function EventDetailPage() {
         if (cancelled) return;
         setSseStatus("reconnecting");
         es.close();
-        reconnectTimer = setTimeout(connect, 3000);
+        reconnectTimer = setTimeout(connect, reconnectDelay);
+        reconnectDelay = Math.min(reconnectDelay * 2, MAX_DELAY);
       };
     }
 
@@ -295,6 +303,20 @@ export default function EventDetailPage() {
       clearTimeout(reconnectTimer);
     };
   }, [eventId]);
+
+  // ── Esc 關閉 Modal ────────────────────────────────────────────────────────────
+  // 按下 Esc 關閉最上層開啟的 Modal（刪除確認疊在其他 Modal 之上，故優先處理）。
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      if (deleteTarget) setDeleteTarget(null);
+      else if (showSettleModal) setShowSettleModal(false);
+      else if (showExpModal) setShowExpModal(false);
+      else if (showRepayModal) setShowRepayModal(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [deleteTarget, showSettleModal, showExpModal, showRepayModal]);
 
   // ── Members ───────────────────────────────────────────────────────────────────
 
@@ -436,7 +458,7 @@ export default function EventDetailPage() {
     }
 
     if (shares.length === 0) {
-      alert("請選擇至少一位分攤成員");
+      setOpError("❌ 請選擇至少一位分攤成員");
       return;
     }
 
