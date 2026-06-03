@@ -16,80 +16,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-type Participant = { id: number; name: string; emoji: string };
-
-type ExpenseShare = {
-  id: number;
-  participantId: number;
-  shareRatio: number;
-  amount: number;
-};
-
-type Expense = {
-  id: number;
-  title: string;
-  amount: number;
-  paidBy: Participant;
-  paidById: number;
-  shares: ExpenseShare[];
-};
-
-type EventDetail = {
-  id: number;
-  name: string;
-  startDate: string;
-  endDate: string | null;
-  isSettled: boolean;
-  participants: Participant[];
-  expenses: Expense[];
-};
-
-type Balance = {
-  participantId: number;
-  name: string;
-  emoji: string;
-  balance: number;
-};
-
-type Transfer = {
-  from: { participantId: number; name: string; emoji: string };
-  to: { participantId: number; name: string; emoji: string };
-  amount: number;
-};
-
-type SettlementData = { settlements: Transfer[]; balances: Balance[] };
-
-type Repayment = {
-  id: number;
-  fromId: number;
-  toId: number;
-  amount: number;
-  note: string | null;
-  createdAt: string;
-  fromParticipant: Participant;
-  toParticipant: Participant;
-};
-
-type Tab = "members" | "expenses" | "settlement";
-type SplitMode = "equal" | "custom";
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function fmtDateRange(startIso: string, endIso: string | null) {
-  const [sy, sm, sd] = startIso.slice(0, 10).split("-");
-  const start = `${sy}/${sm}/${sd}`;
-  if (!endIso) return start;
-  const [, em, ed] = endIso.slice(0, 10).split("-");
-  const days = Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 86400000) + 1;
-  return `${start} ~ ${em}/${ed}（${days}天）`;
-}
-
-function fmtNT(n: number) {
-  return `NT$${Math.abs(n).toLocaleString()}`;
-}
+import type {
+  Participant,
+  Expense,
+  EventDetail,
+  SettlementData,
+  Repayment,
+  Tab,
+  SplitMode,
+} from "./types";
+import { fmtDateRange, fmtNT } from "./format";
+import { inputSt, accentBtnSt, ghostBtnSt, rowCard, deleteIconBtn } from "./styles";
+import {
+  SettlementLoadingView,
+  EmptyState,
+  SectionLabel,
+  Field,
+} from "./components/presentational";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -1727,130 +1670,3 @@ export default function EventDetailPage() {
     </div>
   );
 }
-
-// ── Sub-components ─────────────────────────────────────────────────────────────
-
-function RollingDigit({ speed }: { speed: number }) {
-  const [n, setN] = useState(() => Math.floor(Math.random() * 10));
-  useEffect(() => {
-    const t = setInterval(() => setN((v) => (v + 1) % 10), speed);
-    return () => clearInterval(t);
-  }, [speed]);
-  return (
-    <span style={{ display: "inline-block", width: "0.58em", textAlign: "center" }}>
-      {n}
-    </span>
-  );
-}
-
-function SettlementLoadingView() {
-  return (
-    <div style={{ textAlign: "center", padding: "52px 0 44px" }}>
-      <div style={{ fontSize: 52, lineHeight: 1, marginBottom: 18 }}>🧮</div>
-      <div style={{
-        fontFamily: "monospace",
-        fontSize: 26,
-        fontWeight: 700,
-        color: "var(--accent)",
-        letterSpacing: "0.08em",
-        marginBottom: 14,
-      }}>
-        <RollingDigit speed={85} />
-        <RollingDigit speed={120} />
-        <RollingDigit speed={97} />
-        <span style={{ opacity: 0.35, margin: "0 1px" }}>,</span>
-        <RollingDigit speed={110} />
-        <RollingDigit speed={74} />
-        <RollingDigit speed={91} />
-      </div>
-      <p style={{ fontSize: 13, color: "var(--text-sub)", margin: 0, letterSpacing: "0.06em" }}>
-        計算中
-      </p>
-    </div>
-  );
-}
-
-function EmptyState({ icon, text }: { icon: string; text: string }) {
-  return (
-    <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text-sub)" }}>
-      <div style={{ fontSize: 44, marginBottom: 8 }}>{icon}</div>
-      <p style={{ fontSize: 16 }}>{text}</p>
-    </div>
-  );
-}
-
-function SectionLabel({ text }: { text: string }) {
-  return (
-    <p style={{ fontSize: 13, color: "var(--text-sub)", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 10 }}>
-      {text}
-    </p>
-  );
-}
-
-function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: 14 }}>
-      <label style={{ display: "block", fontSize: 14, color: "var(--text-sub)", marginBottom: 6, fontWeight: 500 }}>
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-// ── Shared styles ──────────────────────────────────────────────────────────────
-
-const inputSt: React.CSSProperties = {
-  width: "100%",
-  padding: "13px 14px",
-  background: "var(--bg-card)",
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  fontSize: 16,
-  color: "var(--text-main)",
-  outline: "none",
-};
-
-const accentBtnSt: React.CSSProperties = {
-  padding: "12px 16px",
-  background: "var(--accent)",
-  color: "white",
-  border: "none",
-  borderRadius: 8,
-  fontSize: 16,
-  fontWeight: 600,
-  cursor: "pointer",
-};
-
-const ghostBtnSt: React.CSSProperties = {
-  flex: 1,
-  padding: "12px 0",
-  background: "var(--bg-card)",
-  color: "var(--text-main)",
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  fontSize: 16,
-  fontWeight: 600,
-  cursor: "pointer",
-};
-
-const rowCard: React.CSSProperties = {
-  background: "var(--bg-card)",
-  border: "1px solid var(--border)",
-  borderRadius: 10,
-  padding: "12px 16px",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-};
-
-const deleteIconBtn: React.CSSProperties = {
-  background: "none",
-  border: "none",
-  cursor: "pointer",
-  fontSize: 16,
-  padding: 4,
-  borderRadius: 6,
-  lineHeight: 1,
-  flexShrink: 0,
-};
