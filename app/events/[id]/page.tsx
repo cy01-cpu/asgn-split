@@ -8,6 +8,7 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { buildEqualShares, buildCustomShares } from "@/lib/shares";
+import { evalAmountExpr } from "@/lib/amount";
 import {
   Select,
   SelectContent,
@@ -88,19 +89,6 @@ function fmtDateRange(startIso: string, endIso: string | null) {
 
 function fmtNT(n: number) {
   return `NT$${Math.abs(n).toLocaleString()}`;
-}
-
-function evalAmountExpr(s: string): number | null {
-  const trimmed = s.trim();
-  if (!trimmed) return null;
-  if (!/^[\d\s+\-*/().]+$/.test(trimmed)) return null;
-  try {
-    const result = new Function(`"use strict"; return (${trimmed})`)();
-    if (typeof result !== "number" || !isFinite(result) || result <= 0) return null;
-    return Math.round(result);
-  } catch {
-    return null;
-  }
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
