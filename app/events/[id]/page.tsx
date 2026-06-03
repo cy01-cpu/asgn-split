@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ThemeSwitcher } from "../../components/ThemeSwitcher";
@@ -16,15 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type {
-  Participant,
-  Expense,
-  EventDetail,
-  SettlementData,
-  Repayment,
-  Tab,
-  SplitMode,
-} from "./types";
+import type { Participant, Expense, Repayment, Tab, SplitMode } from "./types";
+import { useEventData } from "./useEventData";
 import { fmtDateRange, fmtNT } from "./format";
 import { inputSt, accentBtnSt, ghostBtnSt, rowCard, deleteIconBtn } from "./styles";
 import {
@@ -44,9 +37,20 @@ export default function EventDetailPage() {
   const params = useParams();
   const eventId = Number(params.id);
 
-  const [event, setEvent] = useState<EventDetail | null>(null);
-  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("members");
+
+  const {
+    event,
+    loading,
+    settlement,
+    settlementLoading,
+    repayments,
+    isAdmin,
+    sseStatus,
+    fetchEvent,
+    fetchSettlement,
+    fetchRepayments,
+  } = useEventData(eventId, tab);
 
   // Members state
   const [newName, setNewName] = useState("");
@@ -72,13 +76,10 @@ export default function EventDetailPage() {
   const [customRatios, setCustomRatios] = useState<Record<number, string>>({});
   const [savingExp, setSavingExp] = useState(false);
 
-  // Settlement state
-  const [settlement, setSettlement] = useState<SettlementData | null>(null);
-  const [settlementLoading, setSettlementLoading] = useState(false);
+  // Settlement UI state
   const [copied, setCopied] = useState(false);
 
   // Repayment state
-  const [repayments, setRepayments] = useState<Repayment[]>([]);
   const [showRepayModal, setShowRepayModal] = useState(false);
   const [editingRepayId, setEditingRepayId] = useState<number | null>(null);
   const [repayFromId, setRepayFromId] = useState<number | "">("");
@@ -95,109 +96,10 @@ export default function EventDetailPage() {
   // Error state
   const [opError, setOpError] = useState("");
 
-  // SSE state
-  const [sseStatus, setSseStatus] = useState<"connected" | "reconnecting">("reconnecting");
-
-  // Admin + settle state
-  const [isAdmin, setIsAdmin] = useState(false);
+  // Settle modal state
   const [showSettleModal, setShowSettleModal] = useState(false);
   const [settleAction, setSettleAction] = useState<"settle" | "unsettle">("settle");
   const [savingSettle, setSavingSettle] = useState(false);
-
-  // ── Data fetching ────────────────────────────────────────────────────────────
-
-  const fetchEvent = useCallback(async () => {
-    const res = await fetch(`/api/events/${eventId}`);
-    if (!res.ok) { setLoading(false); return; }
-    setEvent(await res.json());
-    setLoading(false);
-  }, [eventId]);
-
-  useEffect(() => {
-    fetchEvent();
-    fetch("/api/admin/check").then(r => r.json()).then(d => setIsAdmin(d.isAdmin));
-  }, [fetchEvent]);
-
-  const fetchSettlement = useCallback(async () => {
-    setSettlementLoading(true);
-    const res = await fetch(`/api/events/${eventId}/settlement`);
-    setSettlement(await res.json());
-    setSettlementLoading(false);
-  }, [eventId]);
-
-  const fetchRepayments = useCallback(async () => {
-    const res = await fetch(`/api/events/${eventId}/repayments`);
-    if (res.ok) setRepayments(await res.json());
-  }, [eventId]);
-
-  useEffect(() => {
-    if (tab === "settlement") {
-      fetchSettlement();
-      fetchRepayments();
-    }
-  }, [tab, fetchSettlement, fetchRepayments]);
-
-  // ── SSE ────────────────────────────────────────────────────────────────────────
-
-  // Ref keeps latest callbacks without changing SSE effect deps
-  const onSseUpdateRef = useRef(() => { fetchEvent(); });
-  useEffect(() => {
-    onSseUpdateRef.current = () => {
-      fetchEvent();
-      if (tab === "settlement") {
-        fetchSettlement();
-        fetchRepayments();
-      }
-    };
-  }, [fetchEvent, fetchSettlement, fetchRepayments, tab]);
-
-  useEffect(() => {
-    let es: EventSource;
-    let reconnectTimer: ReturnType<typeof setTimeout>;
-    let cancelled = false;
-
-    // 指數退避：3s → 6s → 12s …，最長 30s。連線成功後歸零，下次斷線重新從 3s 起算。
-    const BASE_DELAY = 3000;
-    const MAX_DELAY = 30000;
-    let reconnectDelay = BASE_DELAY;
-
-    function connect() {
-      if (cancelled) return;
-      es = new EventSource(`/api/events/${eventId}/stream`);
-
-      es.onopen = () => {
-        if (cancelled) return;
-        setSseStatus("connected");
-        reconnectDelay = BASE_DELAY;
-      };
-
-      es.onmessage = (e) => {
-        if (cancelled) return;
-        try {
-          const data = JSON.parse(e.data) as { type: string };
-          if (data.type !== "heartbeat" && data.type !== "connected") {
-            onSseUpdateRef.current();
-          }
-        } catch {}
-      };
-
-      es.onerror = () => {
-        if (cancelled) return;
-        setSseStatus("reconnecting");
-        es.close();
-        reconnectTimer = setTimeout(connect, reconnectDelay);
-        reconnectDelay = Math.min(reconnectDelay * 2, MAX_DELAY);
-      };
-    }
-
-    connect();
-
-    return () => {
-      cancelled = true;
-      es?.close();
-      clearTimeout(reconnectTimer);
-    };
-  }, [eventId]);
 
   // ── Esc 關閉 Modal ────────────────────────────────────────────────────────────
   // 按下 Esc 關閉最上層開啟的 Modal（刪除確認疊在其他 Modal 之上，故優先處理）。
