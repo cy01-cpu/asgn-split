@@ -4,27 +4,19 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ThemeSwitcher } from "../../components/ThemeSwitcher";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { buildEqualShares, buildCustomShares } from "@/lib/shares";
 import { evalAmountExpr } from "@/lib/amount";
 import type { Participant, Expense, Repayment, Tab, SplitMode } from "./types";
 import { useEventData } from "./useEventData";
 import { fmtDateRange, fmtNT } from "./format";
-import { inputSt, accentBtnSt, ghostBtnSt, rowCard, deleteIconBtn } from "./styles";
-import {
-  SettlementLoadingView,
-  EmptyState,
-  SectionLabel,
-} from "./components/presentational";
 import { DeleteConfirmModal } from "./components/DeleteConfirmModal";
 import { ExpenseModal } from "./components/ExpenseModal";
 import { RepaymentModal } from "./components/RepaymentModal";
 import { SettleModal } from "./components/SettleModal";
-
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-const EMOJI_LIST = ["🌸", "🎈", "🐳", "🦔", "🐢", "👼", "🌹", "🌞", "🎵", "🌙", "🐶", "🍀"];
+import { MembersTab } from "./components/MembersTab";
+import { ExpensesTab } from "./components/ExpensesTab";
+import { SettlementTab } from "./components/SettlementTab";
+import { EMOJI_LIST } from "./constants";
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -550,468 +542,62 @@ export default function EventDetailPage() {
 
           {/* ────────────── Members Tab ────────────── */}
           {tab === "members" && (
-            <div>
-              {/* Add member panel */}
-              {!(event.isSettled && !isAdmin) && <div style={{
-                background: "var(--bg-card)",
-                border: "1px solid var(--border)",
-                borderRadius: 12,
-                padding: "14px 14px 12px",
-                marginBottom: 20,
-              }}>
-                <p style={{ fontSize: 13, color: "var(--text-sub)", fontWeight: 600, margin: "0 0 10px" }}>選擇頭像</p>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6, marginBottom: 12 }}>
-                  {EMOJI_LIST.map((e) => (
-                    <button
-                      key={e}
-                      onClick={() => setSelectedEmoji(e)}
-                      style={{
-                        width: "100%", height: 44,
-                        fontSize: 22,
-                        borderRadius: 8,
-                        border: selectedEmoji === e ? "2px solid var(--accent)" : "2px solid transparent",
-                        background: selectedEmoji === e ? "var(--bg-main)" : "transparent",
-                        cursor: "pointer",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        transition: "all 0.12s",
-                        boxShadow: selectedEmoji === e ? "0 0 0 1px var(--accent)" : "none",
-                      }}
-                    >
-                      {e}
-                    </button>
-                  ))}
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <Input
-                    value={newName}
-                    onChange={(e) => { setNewName(e.target.value); setDupNameError(""); }}
-                    onKeyDown={(e) => e.key === "Enter" && addMember()}
-                    placeholder="輸入成員名稱"
-                    style={{ ...inputSt, flex: 1, borderColor: dupNameError ? "var(--morandi-red)" : undefined }}
-                  />
-                  <Button
-                    onClick={addMember}
-                    disabled={addingMember || !newName.trim() || !selectedEmoji}
-                    style={accentBtnSt}
-                  >
-                    {addingMember ? <><span className="spinner" />處理中...</> : "新增"}
-                  </Button>
-                </div>
-                {dupNameError && (
-                  <p style={{ fontSize: 12, color: "var(--morandi-red)", margin: "6px 0 0" }}>
-                    {dupNameError}
-                  </p>
-                )}
-              </div>}
-
-              {event.participants.length === 0 ? (
-                <EmptyState icon="👤" text="還沒有成員，先新增幾位吧！" />
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {event.participants.map((p) =>
-                    editingId === p.id ? (
-                      /* ── Inline edit mode ── */
-                      <div key={p.id} style={{ ...rowCard, flexDirection: "column", alignItems: "stretch", gap: 10 }}>
-                        <p style={{ fontSize: 13, color: "var(--text-sub)", fontWeight: 600, margin: 0 }}>更換頭像</p>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6 }}>
-                          {EMOJI_LIST.map((e) => (
-                            <button
-                              key={e}
-                              onClick={() => setEditEmoji(e)}
-                              style={{
-                                width: "100%", height: 44,
-                                fontSize: 22,
-                                borderRadius: 8,
-                                border: editEmoji === e ? "2px solid var(--accent)" : "2px solid transparent",
-                                background: editEmoji === e ? "var(--bg-main)" : "transparent",
-                                cursor: "pointer",
-                                display: "flex", alignItems: "center", justifyContent: "center",
-                                transition: "all 0.12s",
-                                boxShadow: editEmoji === e ? "0 0 0 1px var(--accent)" : "none",
-                              }}
-                            >
-                              {e}
-                            </button>
-                          ))}
-                        </div>
-                        <Input
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && updateMember()}
-                          autoFocus
-                          style={inputSt}
-                        />
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <Button
-                            onClick={() => setEditingId(null)}
-                            style={{ ...ghostBtnSt, flex: 1 }}
-                          >
-                            取消
-                          </Button>
-                          <Button
-                            onClick={updateMember}
-                            disabled={savingEdit || !editName.trim()}
-                            style={{ ...accentBtnSt, flex: 2 }}
-                          >
-                            {savingEdit ? <><span className="spinner" />儲存中...</> : "確認"}
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      /* ── Normal card ── */
-                      <div key={p.id} style={rowCard}>
-                        <span style={{ fontWeight: 600, fontSize: 16 }}>{p.emoji} {p.name}</span>
-                        {!(event.isSettled && !isAdmin) && (
-                          <div style={{ display: "flex", gap: 2 }}>
-                            <Button
-                              onClick={() => startEdit(p)}
-                              disabled={deletingMemberId === p.id}
-                              style={{ ...deleteIconBtn, fontSize: 15 }}
-                              title="編輯成員"
-                            >
-                              ✏️
-                            </Button>
-                            <Button
-                              onClick={() => deleteMember(p.id)}
-                              disabled={deletingMemberId === p.id}
-                              style={{ ...deleteIconBtn, fontSize: 15, minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
-                              title="刪除成員"
-                            >
-                              {deletingMemberId === p.id ? <span className="spinner-sm" /> : "🗑️"}
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  )}
-                </div>
-              )}
-            </div>
+            <MembersTab
+              event={event}
+              isAdmin={isAdmin}
+              selectedEmoji={selectedEmoji}
+              setSelectedEmoji={setSelectedEmoji}
+              newName={newName}
+              setNewName={setNewName}
+              dupNameError={dupNameError}
+              setDupNameError={setDupNameError}
+              addingMember={addingMember}
+              addMember={addMember}
+              editingId={editingId}
+              setEditingId={setEditingId}
+              editEmoji={editEmoji}
+              setEditEmoji={setEditEmoji}
+              editName={editName}
+              setEditName={setEditName}
+              savingEdit={savingEdit}
+              updateMember={updateMember}
+              startEdit={startEdit}
+              deleteMember={deleteMember}
+              deletingMemberId={deletingMemberId}
+            />
           )}
 
           {/* ────────────── Expenses Tab ────────────── */}
           {tab === "expenses" && (
-            <div>
-              {!(event.isSettled && !isAdmin) && (
-                <>
-                  <Button
-                    onClick={openExpModal}
-                    disabled={event.participants.length === 0}
-                    style={{
-                      ...accentBtnSt,
-                      width: "100%",
-                      marginBottom: 16,
-                      padding: "14px 0",
-                    }}
-                  >
-                    ＋ 新增費用
-                  </Button>
-                  {event.participants.length === 0 && (
-                    <p style={{ textAlign: "center", fontSize: 14, color: "var(--text-sub)", marginBottom: 12 }}>
-                      請先至「成員」頁籤新增參與者
-                    </p>
-                  )}
-                </>
-              )}
-
-              {event.expenses.length === 0 ? (
-                <EmptyState icon="🧾" text="還沒有費用記錄" />
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {event.expenses.map((exp) => {
-                    const isExpanded = expandedExpIds.has(exp.id);
-                    return (
-                      <div
-                        key={exp.id}
-                        style={{ ...rowCard, flexDirection: "column", alignItems: "stretch", cursor: "pointer" }}
-                        onClick={() => toggleExpand(exp.id)}
-                      >
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                              <span style={{ fontWeight: 600, fontSize: 16 }}>{exp.title}</span>
-                              <span style={{ fontSize: 11, color: "var(--text-sub)", marginLeft: 2, transition: "transform 0.2s", display: "inline-block", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
-                            </div>
-                            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--accent)" }}>
-                              {fmtNT(exp.amount)}
-                            </div>
-                          </div>
-                          {!(event.isSettled && !isAdmin) && (
-                            <div style={{ display: "flex", gap: 2 }}>
-                              <Button
-                                onClick={(e) => { e.stopPropagation(); openExpEditModal(exp); }}
-                                disabled={deletingExpId === exp.id}
-                                style={deleteIconBtn}
-                                title="編輯費用"
-                              >
-                                ✏️
-                              </Button>
-                              <Button
-                                onClick={(e) => { e.stopPropagation(); deleteExpense(exp.id); }}
-                                disabled={deletingExpId === exp.id}
-                                style={{ ...deleteIconBtn, minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
-                                title="刪除費用"
-                              >
-                                {deletingExpId === exp.id ? <span className="spinner-sm" /> : "🗑️"}
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                        <div style={{ display: "flex", gap: 14, fontSize: 13, color: "var(--text-sub)", marginTop: 10 }}>
-                          <span>💳 {exp.paidBy.name} 付款</span>
-                          <span>👥 {exp.shares.length} 人分攤</span>
-                        </div>
-                        {/* 展開明細 */}
-                        <div style={{
-                          overflow: "hidden",
-                          maxHeight: isExpanded ? "400px" : "0",
-                          opacity: isExpanded ? 1 : 0,
-                          transition: "max-height 0.25s ease, opacity 0.2s",
-                        }}>
-                          <div style={{
-                            marginTop: 10,
-                            padding: "10px 12px",
-                            background: "var(--bg-main)",
-                            borderRadius: 8,
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: "6px 16px",
-                          }}>
-                            {exp.shares.map((s) => {
-                              const p = event.participants.find((pt) => pt.id === s.participantId);
-                              return (
-                                <span key={s.participantId} style={{ fontSize: 13, color: "var(--text-sub)" }}>
-                                  {p?.emoji}{p?.name} {fmtNT(s.amount)}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <ExpensesTab
+              event={event}
+              isAdmin={isAdmin}
+              expandedExpIds={expandedExpIds}
+              deletingExpId={deletingExpId}
+              openExpModal={openExpModal}
+              openExpEditModal={openExpEditModal}
+              deleteExpense={deleteExpense}
+              toggleExpand={toggleExpand}
+            />
           )}
 
           {/* ────────────── Settlement Tab ────────────── */}
           {tab === "settlement" && (
-            <div>
-              {settlementLoading ? (
-                <SettlementLoadingView />
-              ) : settlement ? (
-                <>
-                  {/* Balances */}
-                  <SectionLabel text="每人餘額" />
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
-                    {settlement.balances.map((b) => (
-                      <div key={b.participantId} style={rowCard}>
-                        <span style={{ fontSize: 16 }}>{b.name}</span>
-                        <div style={{ textAlign: "right" }}>
-                          <span style={{
-                            fontWeight: 700,
-                            fontSize: 18,
-                            color: b.balance > 0
-                              ? "var(--morandi-green)"
-                              : b.balance < 0
-                              ? "var(--morandi-red)"
-                              : "var(--text-sub)",
-                          }}>
-                            {b.balance > 0 ? "+" : ""}{fmtNT(b.balance)}
-                          </span>
-                          {b.balance !== 0 && (
-                            <div style={{ fontSize: 12, color: b.balance > 0 ? "var(--morandi-green)" : "var(--morandi-red)", marginTop: 1 }}>
-                              {b.balance > 0 ? "待收" : "未償"}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Transfers */}
-                  <SectionLabel text="轉帳清單" />
-                  {settlement.settlements.length === 0 ? (
-                    <div style={{ marginBottom: 16 }}>
-                      <style>{`
-                        @keyframes confettiFall {
-                          0%   { transform: translateY(-20px) rotate(0deg);   opacity: 1; }
-                          100% { transform: translateY(300px) rotate(720deg); opacity: 0; }
-                        }
-                      `}</style>
-                      <div style={{ position: "relative", overflow: "hidden", height: 80, marginBottom: 4 }}>
-                        {[
-                          { color: "#9b8ea0", size: 10, left: "10%", delay: "0s"   },
-                          { color: "#7a9e87", size: 8,  left: "22%", delay: "0.3s" },
-                          { color: "#b87c7c", size: 12, left: "37%", delay: "0.1s" },
-                          { color: "#d4c9bc", size: 7,  left: "52%", delay: "0.5s" },
-                          { color: "#9b8ea0", size: 9,  left: "65%", delay: "0.2s" },
-                          { color: "#7a9e87", size: 11, left: "78%", delay: "0.4s" },
-                          { color: "#b87c7c", size: 8,  left: "90%", delay: "0.6s" },
-                        ].map((c, i) => (
-                          <div key={i} style={{
-                            position: "absolute",
-                            left: c.left,
-                            top: 0,
-                            width: c.size,
-                            height: c.size,
-                            borderRadius: 2,
-                            background: c.color,
-                            animation: `confettiFall 1.8s ${c.delay} ease-in forwards`,
-                          }} />
-                        ))}
-                      </div>
-                      <div style={{
-                        background: "var(--bg-card)",
-                        border: "1px solid var(--border)",
-                        borderRadius: 10,
-                        padding: "16px",
-                        textAlign: "center",
-                        color: "var(--morandi-green)",
-                        fontWeight: 700,
-                        fontSize: 22,
-                      }}>
-                        🎉 結算完成！
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-                      {settlement.settlements.map((s, i) => (
-                        <div key={i} style={{ ...rowCard, gap: 8 }}>
-                          <span style={{ fontSize: 15, flex: 1, minWidth: 0 }}>
-                            💸 <strong>{s.from.name}</strong>
-                            <span style={{ color: "var(--text-sub)" }}> 付給 </span>
-                            <strong>{s.to.name}</strong>
-                          </span>
-                          <span style={{ fontWeight: 700, color: "var(--accent)", fontSize: 18, whiteSpace: "nowrap" }}>
-                            {fmtNT(s.amount)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Repayment records */}
-                  <SectionLabel text="還款紀錄" />
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-                    {repayments.map((r) => (
-                      <div key={r.id} style={rowCard}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <span style={{ fontSize: 15 }}>
-                            <strong>{r.fromParticipant.name}</strong>
-                            <span style={{ color: "var(--text-sub)" }}> 還給 </span>
-                            <strong>{r.toParticipant.name}</strong>
-                          </span>
-                          <div style={{ display: "flex", gap: 10, marginTop: 3, alignItems: "center" }}>
-                            <span style={{ fontSize: 14, fontWeight: 700, color: "var(--morandi-green)" }}>{fmtNT(r.amount)}</span>
-                            {r.note && <span style={{ fontSize: 13, color: "var(--text-sub)" }}>{r.note}</span>}
-                          </div>
-                        </div>
-                        {!(event.isSettled && !isAdmin) && (
-                          <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
-                            <Button
-                              onClick={() => openRepayModal(r)}
-                              disabled={deletingRepayId === r.id}
-                              style={deleteIconBtn}
-                              title="編輯還款紀錄"
-                            >
-                              ✏️
-                            </Button>
-                            <Button
-                              onClick={() => deleteRepayment(r.id)}
-                              disabled={deletingRepayId === r.id}
-                              style={{ ...deleteIconBtn, minWidth: 28, display: "flex", alignItems: "center", justifyContent: "center" }}
-                              title="刪除還款紀錄"
-                            >
-                              {deletingRepayId === r.id ? <span className="spinner-sm" /> : "🗑️"}
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                    {repayments.length === 0 && (
-                      <div style={{ textAlign: "center", padding: "12px 0", fontSize: 14, color: "var(--text-sub)" }}>
-                        尚無還款紀錄
-                      </div>
-                    )}
-                    {!(event.isSettled && !isAdmin) && (
-                      <button
-                        onClick={() => openRepayModal()}
-                        disabled={!event || event.participants.length < 2}
-                        style={{
-                          width: "100%",
-                          padding: "12px 0",
-                          borderRadius: 10,
-                          border: "1px dashed var(--border)",
-                          background: "transparent",
-                          color: "var(--text-sub)",
-                          fontSize: 15,
-                          cursor: "pointer",
-                        }}
-                      >
-                        ＋ 新增還款紀錄
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Copy + Refresh */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    <Button
-                      onClick={copySettlement}
-                      disabled={copied}
-                      style={{
-                        width: "100%",
-                        padding: "12px 0",
-                        borderRadius: 10,
-                        border: "none",
-                        background: copied ? "var(--morandi-green)" : "var(--accent)",
-                        color: "white",
-                        fontSize: 16,
-                        fontWeight: 600,
-                        transition: "background 0.2s",
-                      }}
-                    >
-                      {copied ? "✅ 已複製！" : "📋 複製結算結果"}
-                    </Button>
-                    <Button
-                      onClick={fetchSettlement}
-                      style={{
-                        width: "100%",
-                        padding: "10px 0",
-                        borderRadius: 10,
-                        border: "1px solid var(--border)",
-                        background: "var(--bg-card)",
-                        color: "var(--text-sub)",
-                        fontSize: 15,
-                      }}
-                    >
-                      🔄 重新計算
-                    </Button>
-                    {isAdmin && event && (
-                      <Button
-                        onClick={() => {
-                          setSettleAction(event.isSettled ? "unsettle" : "settle");
-                          setShowSettleModal(true);
-                        }}
-                        style={{
-                          width: "100%",
-                          padding: "10px 0",
-                          borderRadius: 10,
-                          border: "none",
-                          background: event.isSettled ? "var(--bg-card)" : "var(--accent)",
-                          color: event.isSettled ? "var(--text-sub)" : "white",
-                          fontSize: 15,
-                          fontWeight: 600,
-                        }}
-                      >
-                        {event.isSettled ? "🔓 重啟釐算" : "🔒 帳目兩訖"}
-                      </Button>
-                    )}
-                  </div>
-                </>
-              ) : null}
-            </div>
+            <SettlementTab
+              event={event}
+              isAdmin={isAdmin}
+              settlementLoading={settlementLoading}
+              settlement={settlement}
+              repayments={repayments}
+              deletingRepayId={deletingRepayId}
+              copied={copied}
+              openRepayModal={openRepayModal}
+              deleteRepayment={deleteRepayment}
+              copySettlement={copySettlement}
+              fetchSettlement={fetchSettlement}
+              setSettleAction={setSettleAction}
+              setShowSettleModal={setShowSettleModal}
+            />
           )}
         </div>
       </div>
