@@ -4,18 +4,10 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ThemeSwitcher } from "../../components/ThemeSwitcher";
-import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { buildEqualShares, buildCustomShares } from "@/lib/shares";
 import { evalAmountExpr } from "@/lib/amount";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import type { Participant, Expense, Repayment, Tab, SplitMode } from "./types";
 import { useEventData } from "./useEventData";
 import { fmtDateRange, fmtNT } from "./format";
@@ -24,8 +16,11 @@ import {
   SettlementLoadingView,
   EmptyState,
   SectionLabel,
-  Field,
 } from "./components/presentational";
+import { DeleteConfirmModal } from "./components/DeleteConfirmModal";
+import { ExpenseModal } from "./components/ExpenseModal";
+import { RepaymentModal } from "./components/RepaymentModal";
+import { SettleModal } from "./components/SettleModal";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -1049,525 +1044,72 @@ export default function EventDetailPage() {
 
       {/* ────────────── Delete Confirm Modal ────────────── */}
       {deleteTarget && (
-        <div
-          style={{ position: "fixed", inset: 0, background: "rgba(92,82,72,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "0 16px" }}
-        >
-          <div
-            style={{ background: "var(--bg-main)", border: "1px solid var(--border)", borderRadius: 16, padding: "24px 20px", width: "100%", maxWidth: 420 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: 0 }}>
-                {deleteTarget.type === "member" ? "刪除成員？" : deleteTarget.type === "expense" ? "刪除費用？" : "刪除還款紀錄？"}
-              </h2>
-              <button
-                onClick={() => setDeleteTarget(null)}
-                className="rounded-full p-1.5 text-[#8c7e72] hover:text-[#5c5248] hover:bg-[#e8e0d5] transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <p style={{ fontSize: 15, color: "var(--text-sub)", lineHeight: 1.65, margin: "0 0 24px" }}>
-              {deleteTarget.type === "member"
-                ? `確定要刪除「${deleteTarget.label}」嗎？若有相關費用記錄將無法刪除。`
-                : deleteTarget.type === "expense"
-                ? `確定要刪除費用「${deleteTarget.label}」嗎？此操作無法復原。`
-                : `確定要刪除「${deleteTarget.label}」的還款紀錄嗎？`}
-            </p>
-            <div style={{ display: "flex", gap: 8 }}>
-              <Button
-                onClick={() => setDeleteTarget(null)}
-                style={{ flex: 1, padding: "12px 0", background: "var(--bg-card)", color: "var(--text-main)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 16, fontWeight: 600 }}
-              >
-                取消
-              </Button>
-              <Button
-                onClick={() => {
-                  const t = deleteTarget;
-                  setDeleteTarget(null);
-                  if (t.type === "member") doDeleteMember(t.id);
-                  else if (t.type === "expense") doDeleteExpense(t.id);
-                  else doDeleteRepayment(t.id);
-                }}
-                style={{ flex: 1, padding: "12px 0", border: "none", borderRadius: 8, fontSize: 16, fontWeight: 600, background: "var(--morandi-red)", color: "white" }}
-              >
-                確定刪除
-              </Button>
-            </div>
-          </div>
-        </div>
+        <DeleteConfirmModal
+          target={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={(t) => {
+            setDeleteTarget(null);
+            if (t.type === "member") doDeleteMember(t.id);
+            else if (t.type === "expense") doDeleteExpense(t.id);
+            else doDeleteRepayment(t.id);
+          }}
+        />
       )}
 
       {/* ────────────── Expense Modal ────────────── */}
       {showExpModal && (
-        <div
-          style={{ position: "fixed", inset: 0, background: "rgba(92,82,72,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 50 }}
-        >
-          <div
-            style={{
-              background: "var(--bg-main)",
-              border: "1px solid var(--border)",
-              borderRadius: "20px 20px 0 0",
-              padding: "24px 16px 32px",
-              width: "100%",
-              maxWidth: 640,
-              maxHeight: "90dvh",
-              overflowY: "auto",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ width: 36, height: 4, background: "var(--border)", borderRadius: 2, margin: "0 auto 20px" }} />
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: 0 }}>
-                {editingExpId !== null ? "編輯費用" : "新增費用"}
-              </h2>
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowExpModal(false); }}
-                onMouseDown={(e) => e.stopPropagation()}
-                className="rounded-full p-1.5 text-[#8c7e72] hover:text-[#5c5248] hover:bg-[#e8e0d5] transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Title */}
-            <Field label="費用標題">
-              <Input
-                value={expTitle}
-                onChange={(e) => setExpTitle(e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                placeholder="例：晚餐、計程車"
-                style={inputSt}
-                autoFocus
-              />
-            </Field>
-
-            {/* Amount */}
-            <Field label="金額（元）">
-              <Input
-                type="text"
-                inputMode="decimal"
-                value={expAmount}
-                onChange={(e) => setExpAmount(e.target.value)}
-                onBlur={(e) => {
-                  e.stopPropagation();
-                  const result = evalAmountExpr(e.target.value);
-                  if (result !== null) setExpAmount(String(result));
-                }}
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                placeholder="金額（可輸入算式如 120+80）"
-                style={inputSt}
-              />
-            </Field>
-
-            {/* Paid by */}
-            <Field label="誰付的">
-              <Select
-                value={String(expPaidById)}
-                onValueChange={(v) => setExpPaidById(Number(v))}
-              >
-                <SelectTrigger
-                  style={inputSt}
-                  onClick={(e) => e.stopPropagation()}
-                  onMouseDown={(e) => e.stopPropagation()}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {event.participants.map((p) => (
-                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-
-            {/* Split mode */}
-            <Field label="分攤方式">
-              <div style={{ display: "flex", gap: 8 }}>
-                {(["equal", "custom"] as SplitMode[]).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={(e) => { e.stopPropagation(); setSplitMode(mode); }}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    style={{
-                      flex: 1,
-                      padding: "11px 0",
-                      borderRadius: 8,
-                      border: "1px solid var(--border)",
-                      cursor: "pointer",
-                      fontSize: 15,
-                      fontWeight: 600,
-                      background: splitMode === mode ? "var(--accent)" : "var(--bg-card)",
-                      color: splitMode === mode ? "white" : "var(--text-main)",
-                      transition: "all 0.15s",
-                    }}
-                  >
-                    {mode === "equal" ? "平均分攤" : "自訂比例"}
-                  </button>
-                ))}
-              </div>
-            </Field>
-
-            {/* Equal split */}
-            {splitMode === "equal" && (
-              <Field label="選擇分攤成員">
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {event.participants.map((p) => {
-                    const checked = equalSelected.has(p.id);
-                    return (
-                      <label
-                        key={p.id}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                          cursor: "pointer",
-                          background: checked ? "var(--bg-main)" : "var(--bg-card)",
-                          border: `1px solid ${checked ? "var(--accent)" : "var(--border)"}`,
-                          borderRadius: 8,
-                          padding: "10px 12px",
-                          transition: "all 0.12s",
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(e) => {
-                            const next = new Set(equalSelected);
-                            if (e.target.checked) next.add(p.id);
-                            else next.delete(p.id);
-                            setEqualSelected(next);
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          onMouseDown={(e) => e.stopPropagation()}
-                          style={{ accentColor: "var(--accent)", width: 16, height: 16 }}
-                        />
-                        <span style={{ flex: 1, fontSize: 15 }}>{p.name}</span>
-                        {checked && equalPerPerson > 0 && (
-                          <span style={{ fontSize: 13, color: "var(--text-sub)" }}>
-                            {fmtNT(equalPerPerson)}
-                          </span>
-                        )}
-                      </label>
-                    );
-                  })}
-                </div>
-              </Field>
-            )}
-
-            {/* Custom ratio */}
-            {splitMode === "custom" && (
-              <Field
-                label={
-                  <span style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <span style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span>自訂比例</span>
-                      <span style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: customRatioSum === 100 ? "var(--morandi-green)" : "var(--morandi-red)",
-                      }}>
-                        合計 {customRatioSum}%
-                        {customRatioSum !== 100 && " ≠ 100%"}
-                      </span>
-                    </span>
-                    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ flex: 1, height: 6, background: "#e8e0d5", borderRadius: 3, overflow: "hidden", display: "block" }}>
-                        <span style={{
-                          display: "block",
-                          height: "100%",
-                          width: `${Math.min(customRatioSum, 100)}%`,
-                          background: customRatioSum < 100 ? "#9b8ea0" : customRatioSum === 100 ? "#7a9e87" : "#b87c7c",
-                          borderRadius: 3,
-                          transition: "width 0.2s, background 0.2s",
-                        }} />
-                      </span>
-                      <span style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: customRatioSum < 100 ? "#9b8ea0" : customRatioSum === 100 ? "#7a9e87" : "#b87c7c",
-                        minWidth: 34,
-                        textAlign: "right",
-                      }}>
-                        {customRatioSum}%
-                      </span>
-                    </span>
-                  </span>
-                }
-              >
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {event.participants.map((p) => {
-                    const ratio = Number(customRatios[p.id] ?? 0);
-                    const parsedAmt = evalAmountExpr(expAmount) ?? Number(expAmount);
-                    const amt = expAmount && customRatioSum > 0
-                      ? Math.floor((ratio / customRatioSum) * parsedAmt)
-                      : 0;
-                    return (
-                      <div
-                        key={p.id}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                          background: "var(--bg-card)",
-                          border: "1px solid var(--border)",
-                          borderRadius: 8,
-                          padding: "10px 12px",
-                        }}
-                      >
-                        <span style={{ flex: 1, fontSize: 15 }}>{p.name}</span>
-                        <Input
-                          type="number"
-                          value={customRatios[p.id] ?? "0"}
-                          onChange={(e) =>
-                            setCustomRatios((prev) => ({ ...prev, [p.id]: e.target.value }))
-                          }
-                          onClick={(e) => e.stopPropagation()}
-                          onMouseDown={(e) => e.stopPropagation()}
-                          onPointerDown={(e) => e.stopPropagation()}
-                          min={0}
-                          max={100}
-                          style={{
-                            width: 58,
-                            padding: "5px 8px",
-                            background: "var(--bg-main)",
-                            border: "1px solid var(--border)",
-                            borderRadius: 6,
-                            fontSize: 13,
-                            color: "var(--text-main)",
-                            textAlign: "right",
-                          }}
-                        />
-                        <span style={{ fontSize: 13, color: "var(--text-sub)", width: 14 }}>%</span>
-                        {amt > 0 && (
-                          <span style={{ fontSize: 12, color: "var(--text-sub)", width: 64, textAlign: "right" }}>
-                            {fmtNT(amt)}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </Field>
-            )}
-
-            {/* Buttons */}
-            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-              <Button onClick={() => setShowExpModal(false)} style={ghostBtnSt}>取消</Button>
-              <Button
-                onClick={saveExpense}
-                disabled={
-                  savingExp ||
-                  !expTitle.trim() ||
-                  !expAmount ||
-                  expPaidById === "" ||
-                  (splitMode === "custom" && customRatioSum !== 100)
-                }
-                style={{ ...accentBtnSt, flex: 1 }}
-              >
-                {savingExp ? <><span className="spinner" />處理中...</> : editingExpId !== null ? "儲存變更" : "新增費用"}
-              </Button>
-            </div>
-          </div>
-        </div>
+        <ExpenseModal
+          participants={event.participants}
+          isEditing={editingExpId !== null}
+          title={expTitle}
+          setTitle={setExpTitle}
+          amount={expAmount}
+          setAmount={setExpAmount}
+          paidById={expPaidById}
+          setPaidById={setExpPaidById}
+          splitMode={splitMode}
+          setSplitMode={setSplitMode}
+          equalSelected={equalSelected}
+          setEqualSelected={setEqualSelected}
+          customRatios={customRatios}
+          setCustomRatios={setCustomRatios}
+          equalPerPerson={equalPerPerson}
+          customRatioSum={customRatioSum}
+          saving={savingExp}
+          onClose={() => setShowExpModal(false)}
+          onSave={saveExpense}
+        />
       )}
 
       {/* ────────────── Repayment Modal ────────────── */}
       {showRepayModal && (
-        <div
-          style={{ position: "fixed", inset: 0, background: "rgba(92,82,72,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 50 }}
-        >
-          <div
-            style={{
-              background: "var(--bg-main)",
-              border: "1px solid var(--border)",
-              borderRadius: "20px 20px 0 0",
-              padding: "24px 16px 32px",
-              width: "100%",
-              maxWidth: 640,
-              maxHeight: "85dvh",
-              overflowY: "auto",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ width: 36, height: 4, background: "var(--border)", borderRadius: 2, margin: "0 auto 20px" }} />
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: 0 }}>
-                {editingRepayId !== null ? "編輯還款紀錄" : "新增還款紀錄"}
-              </h2>
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowRepayModal(false); }}
-                onMouseDown={(e) => e.stopPropagation()}
-                className="rounded-full p-1.5 text-[#8c7e72] hover:text-[#5c5248] hover:bg-[#e8e0d5] transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <Field label="誰還款">
-              <Select
-                value={String(repayFromId)}
-                onValueChange={(v) => setRepayFromId(Number(v))}
-              >
-                <SelectTrigger
-                  style={inputSt}
-                  onClick={(e) => e.stopPropagation()}
-                  onMouseDown={(e) => e.stopPropagation()}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {event.participants.map((p) => (
-                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-
-            <Field label="還給誰">
-              <Select
-                value={String(repayToId)}
-                onValueChange={(v) => setRepayToId(Number(v))}
-              >
-                <SelectTrigger
-                  style={inputSt}
-                  onClick={(e) => e.stopPropagation()}
-                  onMouseDown={(e) => e.stopPropagation()}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {event.participants.map((p) => (
-                    <SelectItem key={p.id} value={String(p.id)} disabled={p.id === repayFromId}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-
-            <Field label="金額（元）">
-              <Input
-                type="number"
-                value={repayAmount}
-                onChange={(e) => setRepayAmount(e.target.value)}
-                onBlur={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
-                placeholder="0"
-                min={1}
-                style={inputSt}
-                autoFocus
-              />
-            </Field>
-
-            <Field label="付款方式">
-              <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-                {(["💚 Line Pay", "🏦 銀行轉帳", "💵 現金"] as const).map((method) => (
-                  <button
-                    key={method}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const next = repayPayMethod === method ? "" : method;
-                      setRepayPayMethod(next);
-                      setRepayNote(next);
-                    }}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    style={{
-                      flex: 1,
-                      padding: "10px 4px",
-                      borderRadius: 8,
-                      border: "1px solid var(--border)",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      background: repayPayMethod === method ? "var(--morandi-purple, #b39dac)" : "var(--bg-card)",
-                      color: repayPayMethod === method ? "white" : "var(--text-sub)",
-                      transition: "all 0.15s",
-                    }}
-                  >
-                    {method}
-                  </button>
-                ))}
-              </div>
-            </Field>
-
-            <Field label="備註（選填）">
-              <Input
-                value={repayNote}
-                onChange={(e) => {
-                  setRepayNote(e.target.value);
-                  const knownMethods = ["💚 Line Pay", "🏦 銀行轉帳", "💵 現金"];
-                  if (!knownMethods.includes(e.target.value)) setRepayPayMethod("");
-                }}
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                placeholder="例：Line Pay 轉帳"
-                style={inputSt}
-              />
-            </Field>
-
-            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-              <Button onClick={() => setShowRepayModal(false)} style={ghostBtnSt}>取消</Button>
-              <Button
-                onClick={addRepayment}
-                disabled={savingRepay || repayFromId === "" || repayToId === "" || !repayAmount || repayFromId === repayToId}
-                style={{ ...accentBtnSt, flex: 1 }}
-              >
-                {savingRepay ? <><span className="spinner" />處理中...</> : editingRepayId !== null ? "儲存變更" : "新增紀錄"}
-              </Button>
-            </div>
-          </div>
-        </div>
+        <RepaymentModal
+          participants={event.participants}
+          isEditing={editingRepayId !== null}
+          fromId={repayFromId}
+          setFromId={setRepayFromId}
+          toId={repayToId}
+          setToId={setRepayToId}
+          amount={repayAmount}
+          setAmount={setRepayAmount}
+          payMethod={repayPayMethod}
+          setPayMethod={setRepayPayMethod}
+          note={repayNote}
+          setNote={setRepayNote}
+          saving={savingRepay}
+          onClose={() => setShowRepayModal(false)}
+          onSave={addRepayment}
+        />
       )}
 
       {/* ────────────── Settle Modal ────────────── */}
       {showSettleModal && (
-        <div
-          style={{ position: "fixed", inset: 0, background: "rgba(92,82,72,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "0 16px" }}
-        >
-          <div
-            style={{ background: "var(--bg-main)", border: "1px solid var(--border)", borderRadius: 16, padding: "24px 20px", width: "100%", maxWidth: 420 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text-main)", margin: 0 }}>
-                {settleAction === "settle" ? "確認帳目兩訖？" : "確認重啟釐算？"}
-              </h2>
-              <button
-                onClick={() => setShowSettleModal(false)}
-                className="rounded-full p-1.5 text-[#8c7e72] hover:text-[#5c5248] hover:bg-[#e8e0d5] transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <p style={{ fontSize: 15, color: "var(--text-sub)", lineHeight: 1.65, margin: "0 0 24px" }}>
-              {settleAction === "settle"
-                ? "標記後活動將移至「已結清」區塊，仍可隨時解除。"
-                : "解除後活動將回到進行中，可繼續編輯費用與成員。"}
-            </p>
-            <div style={{ display: "flex", gap: 8 }}>
-              <Button
-                onClick={() => setShowSettleModal(false)}
-                style={{ flex: 1, padding: "12px 0", background: "var(--bg-card)", color: "var(--text-main)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 16, fontWeight: 600 }}
-              >
-                取消
-              </Button>
-              <Button
-                onClick={confirmSettle}
-                disabled={savingSettle}
-                style={{
-                  flex: 1, padding: "12px 0", border: "none", borderRadius: 8, fontSize: 16, fontWeight: 600,
-                  background: settleAction === "settle" ? "var(--morandi-green)" : "var(--morandi-purple)",
-                  color: "white",
-                }}
-              >
-                {savingSettle ? "處理中..." : settleAction === "settle" ? "帳目兩訖" : "重啟釐算"}
-              </Button>
-            </div>
-          </div>
-        </div>
+        <SettleModal
+          action={settleAction}
+          saving={savingSettle}
+          onClose={() => setShowSettleModal(false)}
+          onConfirm={confirmSettle}
+        />
       )}
     </div>
   );

@@ -57,3 +57,9 @@ export type Repayment = {
 
 export type Tab = "members" | "expenses" | "settlement";
 export type SplitMode = "equal" | "custom";
+
+export type DeleteTarget = {
+  type: "member" | "expense" | "repayment";
+  id: number;
+  label: string;
+};
